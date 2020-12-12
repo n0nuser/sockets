@@ -1,13 +1,22 @@
 /*
+** Fichero: servidor.c
+** Autores:
+** Sergio García González
+** Pablo Jesús González Rubio
+*/
+
+/*
  *          		S E R V I D O R
  *
  *	This is an example program that demonstrates the use of
  *	sockets TCP and UDP as an IPC mechanism.  
  *
  */
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/select.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <signal.h>
@@ -17,12 +26,18 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <errno.h>
+#include "utils.h"
 
-#define PUERTO 17278
+//#define PUERTO 17278
+#define _GNU_SOURCE
+#define _XOPEN_SOURCE
+#define PUERTO 4492
 #define ADDRNOTFOUND 0xffffffff /* return address for unfound host */
 #define BUFFERSIZE 1024			/* maximum size of packets to be received */
-#define TAM_BUFFER 10
+#define TAM_BUFFER 100
 #define MAXHOST 128
+#define DEBUG 1
 
 extern int errno;
 
@@ -99,7 +114,7 @@ char *argv[];
 	{
 		perror(argv[0]);
 		fprintf(stderr, "%s: unable to bind address TCP\n", argv[0]);
-		exit(1);
+		exit(2);
 	}
 	/* Initiate the listen on the socket so remote users
 		 * can connect.  The listen backlog is set to 5, which
@@ -109,7 +124,7 @@ char *argv[];
 	{
 		perror(argv[0]);
 		fprintf(stderr, "%s: unable to listen on socket\n", argv[0]);
-		exit(1);
+		exit(3);
 	}
 
 	/* Create the socket UDP. */
@@ -118,14 +133,14 @@ char *argv[];
 	{
 		perror(argv[0]);
 		printf("%s: unable to create socket UDP\n", argv[0]);
-		exit(1);
+		exit(4);
 	}
 	/* Bind the server's address to the socket. */
 	if (bind(s_UDP, (struct sockaddr *)&myaddr_in, sizeof(struct sockaddr_in)) == -1)
 	{
 		perror(argv[0]);
 		printf("%s: unable to bind address UDP\n", argv[0]);
-		exit(1);
+		exit(5);
 	}
 
 	/* Now, all the initialization of the server is
@@ -147,7 +162,7 @@ char *argv[];
 	case -1: /* Unable to fork, for some reason. */
 		perror(argv[0]);
 		fprintf(stderr, "%s: unable to fork daemon\n", argv[0]);
-		exit(1);
+		exit(6);
 
 	case 0: /* The child process (daemon) comes here. */
 
@@ -171,7 +186,7 @@ char *argv[];
 		{
 			perror(" sigaction(SIGCHLD)");
 			fprintf(stderr, "%s: unable to register the SIGCHLD signal\n", argv[0]);
-			exit(1);
+			exit(7);
 		}
 
 		/* Registrar SIGTERM para la finalizacion ordenada del programa servidor */
@@ -181,7 +196,7 @@ char *argv[];
 		{
 			perror(" sigaction(SIGTERM)");
 			fprintf(stderr, "%s: unable to register the SIGTERM signal\n", argv[0]);
-			exit(1);
+			exit(8);
 		}
 
 		while (!FIN)
@@ -206,7 +221,7 @@ char *argv[];
 					FIN = 1;
 					close(ls_TCP);
 					close(s_UDP);
-					perror("\nFinalizando el servidor. Se�al recibida en elect\n ");
+					perror("\nFinalizando el servidor. Senal recibida en select\n ");
 				}
 			}
 			else
@@ -227,11 +242,11 @@ char *argv[];
     				 */
 					s_TCP = accept(ls_TCP, (struct sockaddr *)&clientaddr_in, &addrlen);
 					if (s_TCP == -1)
-						exit(1);
+						exit(9);
 					switch (fork())
 					{
 					case -1: /* Can't fork, just exit. */
-						exit(1);
+
 					case 0:			   /* Child process comes here. */
 						close(ls_TCP); /* Close the listen socket inherited from the daemon. */
 						serverTCP(s_TCP, clientaddr_in);
@@ -267,7 +282,7 @@ char *argv[];
 					{
 						perror(argv[0]);
 						printf("%s: recvfrom error\n", argv[0]);
-						exit(1);
+						exit(11);
 					}
 					/* Make sure the message received is
                 * null terminated.
@@ -298,11 +313,12 @@ char *argv[];
  *	logging information to stdout.
  *
  */
+
 void serverTCP(int s, struct sockaddr_in clientaddr_in)
 {
-	int reqcnt = 0;			/* keeps count of number of requests */
-	char buf[TAM_BUFFER];	/* This example uses TAM_BUFFER byte messages. */
-	char hostname[MAXHOST]; /* remote host's name string */
+	int reqcnt = 0;			  /* keeps count of number of requests */
+	char mensaje[TAM_BUFFER]; /* This example uses TAM_BUFFER byte messages. */
+	char hostname[MAXHOST];	  /* remote host's name string */
 
 	int len, len1, status;
 	struct hostent *hp; /* pointer to host info for remote host */
@@ -311,14 +327,30 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	struct linger linger; /* allow a lingering, graceful close; */
 						  /* used when setting SO_LINGER */
 
+	//VARIABLES PARA NNTP
+	char conexionRed[200];
+	char caracteresRetorno[] = "\r\n";
+	FILE *p;						  //Puntero al archivo del registro
+	struct dirent *dt;				  //Estructura donde estará la información sobre el archivo que se esta "sacando" en cada momento
+	char ficheroLog[] = "nntpd.log";  //Nombre del archivo del registro
+	char pathToWorkspace[BUFFERSIZE]; //Ruta al directorio del codigo fuente
+	char dirOrdenes[] = "/ordenes";	  //Nombre del directorio de ficheros html
+	char respuesta[BUFFERSIZE];		  //Envio de respuesta al cliente
+	char vCabecera[3][100];			  //Vector que guarda la cabecera separada
+	char vConnection[3][50];		  //Vector que guarda la conexion separada
+	char temp[BUFFERSIZE];			  //Cadena auxiliar
+	char temp2[50];
+	int flaggie = 0; //Flag para la comparacion en el directorio
+
 	/* Look up the host information for the remote host
 	 * that we have connected with.  Its internet address
 	 * was returned by the accept call, in the main
 	 * daemon loop above.
 	 */
-
+	debug(DEBUG, "#0");
 	status = getnameinfo((struct sockaddr *)&clientaddr_in, sizeof(clientaddr_in),
 						 hostname, MAXHOST, NULL, 0, 0);
+	debug(DEBUG, "#1");
 	if (status)
 	{
 		/* The information is unavailable for the remote
@@ -330,6 +362,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		if (inet_ntop(AF_INET, &(clientaddr_in.sin_addr), hostname, MAXHOST) == NULL)
 			perror(" inet_ntop \n");
 	}
+	debug(DEBUG, "#2");
 	/* Log a startup message. */
 	time(&timevar);
 	/* The port number must be converted first to host byte
@@ -338,13 +371,14 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		 * that this program could easily be ported to a host
 		 * that does require it.
 		 */
-	printf("Startup from %s port %u at %s",
-		   hostname, ntohs(clientaddr_in.sin_port), (char *)ctime(&timevar));
+	printf("200 %s %s %s",
+		   hostname, inet_ntoa(clientaddr_in.sin_addr), ntohs(clientaddr_in.sin_port), (char *)ctime(&timevar));
 
 	/* Set the socket for a lingering, graceful close.
 		 * This will cause a final close of this socket to wait until all of the
 		 * data sent on it has been received by the remote host.
 		 */
+	debug(DEBUG, "#3");
 	linger.l_onoff = 1;
 	linger.l_linger = 1;
 	if (setsockopt(s, SOL_SOCKET, SO_LINGER, &linger,
@@ -352,7 +386,37 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	{
 		errout(hostname);
 	}
+	debug(DEBUG, "#4");
+	/*Registramos el establecimiento de conexion en el fichero nntp.log*/
+	/*Limpiamos la cadena*/
+	strcpy(temp, "");
+	strcpy(temp2, "");
 
+	strcat(temp, " ");
+	strcat(temp, ctime(&timevar)); //Metemos la fecha y hora
+
+	strcat(temp, " [C] ");
+	strcat(temp, hostname);
+	strcat(temp, " ");
+	strcat(temp, inet_ntoa(clientaddr_in.sin_addr)); //Metemos la IP
+
+	strcat(temp, " ");
+	strcat(temp, "TCP"); //Metemos protocolo de transporte
+
+	strcat(temp, " ");
+	snprintf(temp2, sizeof(temp2), "%d", clientaddr_in.sin_port); //Este es el puerto efímero
+	strcat(temp, temp2);										  //Metemos puerto efimero
+	debug(DEBUG, "#5");
+	//Se guarda la información en el fichero
+	if (NULL == (p = (fopen(ficheroLog, "a"))))
+	{
+
+		fprintf(stderr, "No se ha podido abrir el fichero");
+	}
+	fputs(temp, p); //Ponemos en el fichero la cabecera
+	fclose(p);
+
+	debug(DEBUG, "#6");
 	/* Go into a loop, receiving requests from the remote
 		 * client.  After the client has sent the last request,
 		 * it will do a shutdown for sending, which will cause
@@ -363,40 +427,130 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		 * how the server will know that no more requests will
 		 * follow, and the loop will be exited.
 		 */
-	while (len = recv(s, buf, TAM_BUFFER, 0))
+	while (len = recv(s, mensaje, TAM_BUFFER, 0))
 	{
 		if (len == -1)
 			errout(hostname); /* error from recv */
-							  /* The reason this while loop exists is that there
-			 * is a remote possibility of the above recv returning
-			 * less than TAM_BUFFER bytes.  This is because a recv returns
-			 * as soon as there is some data, and will not wait for
-			 * all of the requested data to arrive.  Since TAM_BUFFER bytes
-			 * is relatively small compared to the allowed TCP
-			 * packet sizes, a partial receive is unlikely.  If
-			 * this example had used 2048 bytes requests instead,
-			 * a partial receive would be far more likely.
-			 * This loop will keep receiving until all TAM_BUFFER bytes
-			 * have been received, thus guaranteeing that the
-			 * next recv at the top of the loop will start at
-			 * the begining of the next request.
-			 */
-		while (len < TAM_BUFFER)
+
+		//RESPUESTA AL CLIENTE CUANDO SE HA ESTABLECIDO CONEXION
+		strcpy(respuesta, "");
+		strcpy(conexionRed, "200 Servidor de noticias ");
+		strcat(conexionRed, hostname);
+		strcat(conexionRed, "preparado");
+		strcat(respuesta, conexionRed);
+		strcat(respuesta, " ");
+		if (send(s, respuesta, strlen(respuesta), 0) != strlen(respuesta))
 		{
-			len1 = recv(s, &buf[len], TAM_BUFFER - len, 0);
-			if (len1 == -1)
-				errout(hostname);
-			len += len1;
+			fprintf(stderr, "Servidor: Send error ");
 		}
-		/* Increment the request count. */
-		reqcnt++;
-		/* This sleep simulates the processing of the
-			 * request that a real server might do.
-			 */
-		sleep(1);
-		/* Send a response back to the client. */
-		if (send(s, buf, TAM_BUFFER, 0) != TAM_BUFFER)
-			errout(hostname);
+		debug(DEBUG, "#16");
+		//COMPROBAR EL TIPO DE CONEXIÓN
+		if (strcmp(vCabecera[0], "LIST") != 0)
+		{
+		}
+		else if (strcmp(vCabecera[0], "NEWGROUPS") != 0)
+		{
+		}
+		else if (strcmp(vCabecera[0], "NEWNEWS") != 0)
+		{
+		}
+		else if (strcmp(vCabecera[0], "GROUP") != 0)
+		{
+		}
+		else if (strcmp(vCabecera[0], "ARTICLE") != 0)
+		{
+		}
+		else if (strcmp(vCabecera[0], "HEAD") != 0)
+		{
+		}
+		else if (strcmp(vCabecera[0], "BODY") != 0)
+		{
+		}
+		else if (strcmp(vCabecera[0], "POST") != 0)
+		{
+		}
+		else if (strcmp(vCabecera[0], "QUIT") != 0)
+		{
+		}
+		else
+		{
+			/*501 NOT IMPLEMENTED*/
+			/*RESPUESTA: */
+			debug(DEBUG, "#17");
+			strcat(respuesta, "501 Not Implemented");
+			strcat(respuesta, caracteresRetorno);
+
+			/*Metemos tambien la cabecera para el fichero .log*/
+			strcat(temp2, "501 Not Implemented");
+			strcat(temp2, caracteresRetorno);
+
+			/*SERVER: */
+			strcat(respuesta, "Server: ");
+			strcat(respuesta, hostname);
+			strcat(respuesta, caracteresRetorno);
+
+			/*CONNECTION: */
+			if (strcmp(vConnection[1], "keep-alive") == 0)
+			{
+				/*NO Se cierra la conexion*/
+				strcat(respuesta, "Connection: ");
+				strcat(respuesta, "keep-alive");
+				strcat(respuesta, caracteresRetorno);
+
+				/*FINAL: */
+				strcat(respuesta, caracteresRetorno);
+				strcat(respuesta, "501 Not Implemented\n");
+
+				sleep(1); //Tiempo de trabajo del servidor
+
+				/*Enviamos la respuesta al cliente*/
+				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
+					errout(hostname);
+
+				/* Incrementamos el contador de peticiones */
+				reqcnt++;
+
+				/*Metemos en el .log*/
+				if (NULL == (p = (fopen(ficheroLog, "a"))))
+				{
+
+					fprintf(stderr, "No se ha podido abrir el fichero");
+				}
+				fputs(temp2, p);
+				fclose(p);
+			}
+			else
+			{
+				/*Se cierra la conexion*/
+				strcat(respuesta, "Connection: ");
+				strcat(respuesta, "close");
+				strcat(respuesta, caracteresRetorno);
+
+				/*FINAL: */
+				strcat(respuesta, caracteresRetorno);
+				strcat(respuesta, "501 Not Implemented\n");
+
+				sleep(1); //Tiempo de trabajo del servidor
+
+				/*Enviamos la respuesta al cliente*/
+				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
+					errout(hostname);
+
+				/* Incrementamos el contador de peticiones */
+				reqcnt++;
+				/*Cerramos la conexion*/
+				close(s);
+
+				/*Metemos en el .log*/
+				if (NULL == (p = (fopen(ficheroLog, "a"))))
+				{
+					fprintf(stderr, "No se ha podido abrir el fichero");
+				}
+				debug(DEBUG, "#18");
+				fputs(temp2, p);
+				fclose(p);
+			}
+		}
 	}
 
 	/* The loop has terminated, because there are no
@@ -409,8 +563,9 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		 * times printed in the log file to reflect more accurately
 		 * the length of time this connection was used.
 		 */
+	debug(DEBUG, "#19");
 	close(s);
-
+	debug(DEBUG, "#20");
 	/* Log a finishing message. */
 	time(&timevar);
 	/* The port number must be converted first to host byte
@@ -429,7 +584,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 void errout(char *hostname)
 {
 	printf("Connection with %s aborted on error\n", hostname);
-	exit(1);
+	exit(12);
 }
 
 /*
@@ -457,8 +612,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
 	/* Treat the message as a string containing a hostname. */
-	/* Esta funci�n es la recomendada para la compatibilidad con IPv6 gethostbyname queda obsoleta. */
-	errcode = getaddrinfo(buffer, NULL, &hints, &res);
+
 	if (errcode != 0)
 	{
 		/* Name was not found.  Return a
