@@ -1,0 +1,9 @@
+Newsgroups: local.redes
+Subject: Sobre los sockets otra vez
+Date: 20201203 143422 Thu, 3 Dec 2020 14:34:22 -0000 (UTC)
+Message-ID: <2@nogal.usal.es>
+
+El número de puerto a utilizar en los servidores en nogal es 9999.
+Siendo 9999 los últimos 4 digitos del DNI del alumno.
+Si el número es menor de 1024 utilizar los últimos 5 dígitos.
+.

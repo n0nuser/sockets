@@ -1,0 +1,24 @@
+LIST
+NEWGROUPS 201130 000000
+NEWGROUPS 201126 120000
+NEWNEWS local.test 201127 120000
+
+
+POST
+Newsgroups: local.redes
+Subject: Sobre los sockets
+
+Los sockets son un API de programación en red.
+Permite utilizar los servicios de los protocolos de transporte TCP y UDP.
+.
+
+POST
+Newsgroups: local.redes
+Subject: Sobre los sockets otra vez
+
+El número de puerto a utilizar en los servidores en nogal es 9999.
+Siendo 9999 los últimos 4 digitos del DNI del alumno.
+Si el número es menor de 1024 utilizar los últimos 5 dígitos.
+.
+
+QUIT

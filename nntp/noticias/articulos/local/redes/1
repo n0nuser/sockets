@@ -1,0 +1,8 @@
+Newsgroups: local.redes
+Subject: Sobre los sockets
+Date: 201203 143209 Thu, 3 Dec 2020 14:32:09 -0000 (UTC)
+Message-ID: <1@nogal.usal.es>
+
+Los sockets son un API de programación en red.
+Permite utilizar los servicios de los protocolos de transporte TCP y UDP.
+.
