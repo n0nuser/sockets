@@ -21,8 +21,7 @@
 extern int errno;
 
 #define PUERTO 4492     //Puerto
-#define TAM_BUFFER 400  //Tamaño del buffer para la lectura del fichero
-#define BUFFERSIZE 1024 //Tamaño del buffer de envio y recepcion de datos
+#define BUFFERSIZE 1024 //Tamaño del buffer
 
 #define ADDRNOTFOUND 0xffffffff // value returned for unknown host
 #define RETRIES 5               //Intentos de recepcion de mensajes
@@ -89,12 +88,12 @@ void TCP(FILE *f, int argc, char *argv[])
 
     char aux[7];
     char envio[BUFFERSIZE];     //String para el envio al servidor
+    char str[BUFFERSIZE];
     char respuesta[BUFFERSIZE]; //String para la respuesta del servidor
     FILE *c;
-    char buf[TAM_BUFFER]; /*Contiene lo leido en el fichero linea a linea*/
+    char buf[BUFFERSIZE]; /*Contiene lo leido en el fichero linea a linea*/
     char conexionRed[] = "NNTP";
     char caracteresRetorno[] = "\r\n";
-    char *str, *corta; //Puntero que apuntará a cada parte de la linea para separar
     char vect[3][100];
     char salida[BUFFERSIZE / 2];
     int q = 0, p = 0;
@@ -169,53 +168,25 @@ void TCP(FILE *f, int argc, char *argv[])
          * that this program could easily be ported to a host
          * that does require it.
          */
-    printf("Connected to %s on port %u at %s", argv[1], ntohs(myaddr_in.sin_port), (char *)ctime(&timevar));
+    printf("[C] Connected to %s on port %u at %s", argv[1], ntohs(myaddr_in.sin_port), (char *)ctime(&timevar));
 
-    /*Se lee el fichero de ordenes correspondiente, linea a linea*/
-    while (fgets(buf, TAM_BUFFER, f) != NULL)
-    {
-        //DEBUG
-        printf("FGETS: %s", buf);
-        /*
-        //Vaciamos el vector que contendra cada argumento de la orden
-        for (p = 0; p < 3; p++)
-        {
-            strcpy(vect[p], "");
+    //RECIBE EL ESTABLECIMIENTO DE CONEXIÓN DEL SERVIDOR (200 PREPARADO)  
+    if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
+        {        
+            fprintf(stderr, "%s: error reading result\n", argv[0]);
+            exit(1);
         }
 
-        //Reseteamos la variable que guarda en el vector
-        q = 0;
-        //Separamos la linea leida en tokens delimitados por espacios
-        str = strtok(buf, " ");
-        //DEBUG
-        for (int i = 0; i < 3;)
-            printf("%s", str[i]);
-        while (str != NULL)
-        {
-
-            strcpy(vect[q], str);
-            //Seguimos con el siguiente token
-        str = strtok(NULL, " ");
-        q++; //Aumentamos la fila del vector
-    }
-
-    //Quitamos los caracteres finales a la pagina para que no de problemas
-    str = strtok(vect[1], caracteresRetorno);
-    strcpy(vect[1], str);
-
-    //CABECERA: le pasamos la orden
-    strcpy(envio, vect[0]);
-    strcat(envio, " ");
-
-    //FINAL: caracteres finales del protocolo
-    strcat(buf, caracteresRetorno);
-
-    //DEBUG
-    printf("ENVIO: %s", envio);
-    */
+    /*Se lee el fichero de ordenes correspondiente, linea a linea*/
+    while (fgets(buf, BUFFERSIZE, f) != NULL)
+    {
+        printf("[C] He recibido: \"%s\"",respuesta);
+        printf("LINEA DE ORDENES (FGETS): %s\n\0", buf);
+        strcat(buf,caracteresRetorno);
+        strcat(buf,"\0");
         /********************ENVIO**********************/
         /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/
-        if (send(s, buf, strlen(buf), 0) != strlen(buf))
+        if (send(s, buf, BUFFERSIZE, 0) != strlen(buf))
         {
             fprintf(stderr, "%s: Connection aborted on error ", argv[0]);
             exit(1);
@@ -224,29 +195,9 @@ void TCP(FILE *f, int argc, char *argv[])
         /********************RECEPCION DE RESPUESTA***********************/
         if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
         {
-            perror(argv[0]);
             fprintf(stderr, "%s: error reading result\n", argv[0]);
             exit(1);
         }
-
-        corta = strtok(respuesta, caracteresRetorno);
-        while (corta != NULL)
-        {
-            /*Copiamos la cadena que salga sobreescribiendo la que haya para quedarnos con la ultima*/
-            strcpy(salida, corta);
-            /*Seguimos con el siguiente token*/
-            corta = strtok(NULL, caracteresRetorno);
-        }
-        strcat(salida, caracteresRetorno);
-        /*Convertimos a string el puerto efimero*/
-        snprintf(aux, sizeof(aux), "%d", myaddr_in.sin_port);
-        strcat(aux, ".txt");
-        if (NULL == (c = (fopen(aux, "a"))))
-        {
-            fprintf(stderr, "No se ha podido abrir el fichero");
-        }
-        fputs(salida, c); //Ponemos en el fichero la cabecera
-        fclose(c);        //Cerramos el fichero
     }
     /* Now, shutdown the connection for further sends.
          * This will cause the server to receive an end-of-file
@@ -283,7 +234,7 @@ void UDP(FILE *f, int argc, char *argv[])
 
     char envio[BUFFERSIZE];     //String para el envio al servidor
     char respuesta[BUFFERSIZE]; //String para la respuesta del servidor
-    char buf[TAM_BUFFER];       /*Contiene lo leido en el fichero linea a linea*/
+    char buf[BUFFERSIZE];       /*Contiene lo leido en el fichero linea a linea*/
     char conexionRed[] = "NNTP";
     char caracteresRetorno[] = "\r\n";
     char *str, *corta; //Puntero que apuntará a cada parte de la linea para separar
@@ -376,54 +327,9 @@ void UDP(FILE *f, int argc, char *argv[])
     }
 
     /*Se lee el fichero de ordenes correspondiente, linea a linea*/
-    while (fgets(buf, TAM_BUFFER, f) != NULL)
+    while (fgets(buf, BUFFERSIZE, f) != NULL)
     {
-        /*Vaciamos el vector que contendra cada argumento de la orden*/
-        for (p = 0; p < 3; p++)
-        {
-            strcpy(vect[p], "");
-        }
 
-        //Reseteamos la variable que guarda en el vector
-        q = 0;
-        /*Separamos la linea leida en tokens delimitados por espacios*/
-        str = strtok(buf, " ");
-        while (str != NULL)
-        {
-
-            strcpy(vect[q], str);
-            /*Seguimos con el siguiente token*/
-            str = strtok(NULL, " ");
-            q++; //Aumentamos la fila del vector
-        }
-
-        /*Si no existe un caracter que indique la conexion*/
-        if (!strcmp(vect[2], ""))
-        {
-            /*Quitamos los caracteres finales a la pagina para que no de problemas*/
-            str = strtok(vect[1], caracteresRetorno);
-            strcpy(vect[1], str);
-        }
-
-        /*CABECERA: Copiamos la parte de la orden, la url, la conexion y los caracteres finales*/
-        strcpy(envio, vect[0]);
-        strcat(envio, " ");
-        strcat(envio, vect[1]);
-        strcat(envio, " ");
-        strcat(envio, conexionRed);
-        strcat(envio, caracteresRetorno);
-        /*HOST: */
-        strcat(envio, "Host: ");
-        strcat(envio, argv[1]);
-        strcat(envio, caracteresRetorno);
-        /*CONEXION: En caso de que haya una especificacion de keep alive la metemos en la conecction, sino no*/
-        if (vect[2][0] == 'k')
-        {
-            /*Si hay conexion (se ha especificado 'k')*/
-            strcat(envio, "Connection: ");
-            strcat(envio, "keep-alive");
-            strcat(envio, caracteresRetorno);
-        }
 
         /*FINAL: caracteres finales del protocolo*/
         strcat(envio, caracteresRetorno);

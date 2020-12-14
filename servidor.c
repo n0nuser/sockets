@@ -27,7 +27,6 @@
 #include <time.h>
 #include <unistd.h>
 #include <errno.h>
-#include "utils.h"
 
 //#define PUERTO 17278
 #define _GNU_SOURCE
@@ -35,9 +34,7 @@
 #define PUERTO 4492
 #define ADDRNOTFOUND 0xffffffff /* return address for unfound host */
 #define BUFFERSIZE 1024			/* maximum size of packets to be received */
-#define TAM_BUFFER 100
 #define MAXHOST 128
-#define DEBUG 1
 
 extern int errno;
 
@@ -317,7 +314,7 @@ char *argv[];
 void serverTCP(int s, struct sockaddr_in clientaddr_in)
 {
 	int reqcnt = 0;			  /* keeps count of number of requests */
-	char mensaje[TAM_BUFFER]; /* This example uses TAM_BUFFER byte messages. */
+	char mensaje[BUFFERSIZE]; /* This example uses BUFFERSIZE byte messages. */
 	char hostname[MAXHOST];	  /* remote host's name string */
 
 	int len, len1, status;
@@ -328,29 +325,24 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 						  /* used when setting SO_LINGER */
 
 	//VARIABLES PARA NNTP
-	char conexionRed[200];
+	char conexionRed[BUFFERSIZE] = "";
 	char caracteresRetorno[] = "\r\n";
-	FILE *p;						  //Puntero al archivo del registro
+	FILE *p, *envio;		  //Puntero al archivo del registro
 	struct dirent *dt;				  //Estructura donde estará la información sobre el archivo que se esta "sacando" en cada momento
 	char ficheroLog[] = "nntpd.log";  //Nombre del archivo del registro
 	char pathToWorkspace[BUFFERSIZE]; //Ruta al directorio del codigo fuente
 	char dirOrdenes[] = "/ordenes";	  //Nombre del directorio de ficheros html
 	char respuesta[BUFFERSIZE];		  //Envio de respuesta al cliente
-	char vCabecera[3][100];			  //Vector que guarda la cabecera separada
-	char vConnection[3][50];		  //Vector que guarda la conexion separada
 	char temp[BUFFERSIZE];			  //Cadena auxiliar
 	char temp2[50];
-	int flaggie = 0; //Flag para la comparacion en el directorio
 
 	/* Look up the host information for the remote host
 	 * that we have connected with.  Its internet address
 	 * was returned by the accept call, in the main
 	 * daemon loop above.
 	 */
-	debug(DEBUG, "#0");
-	status = getnameinfo((struct sockaddr *)&clientaddr_in, sizeof(clientaddr_in),
-						 hostname, MAXHOST, NULL, 0, 0);
-	debug(DEBUG, "#1");
+	status = getnameinfo((struct sockaddr *)&clientaddr_in, sizeof(clientaddr_in), hostname, MAXHOST, NULL, 0, 0);
+
 	if (status)
 	{
 		/* The information is unavailable for the remote
@@ -362,7 +354,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		if (inet_ntop(AF_INET, &(clientaddr_in.sin_addr), hostname, MAXHOST) == NULL)
 			perror(" inet_ntop \n");
 	}
-	debug(DEBUG, "#2");
+
 	/* Log a startup message. */
 	time(&timevar);
 	/* The port number must be converted first to host byte
@@ -371,14 +363,13 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		 * that this program could easily be ported to a host
 		 * that does require it.
 		 */
-	printf("200 %s %s %s",
-		   hostname, inet_ntoa(clientaddr_in.sin_addr), ntohs(clientaddr_in.sin_port), (char *)ctime(&timevar));
-
+	// Se ha iniciado el servidor
+	printf("[S] Startup from %s port %u at %s", hostname, ntohs(clientaddr_in.sin_port), (char *)ctime(&timevar));
 	/* Set the socket for a lingering, graceful close.
 		 * This will cause a final close of this socket to wait until all of the
 		 * data sent on it has been received by the remote host.
 		 */
-	debug(DEBUG, "#3");
+	printf("DEBUG #1\n");
 	linger.l_onoff = 1;
 	linger.l_linger = 1;
 	if (setsockopt(s, SOL_SOCKET, SO_LINGER, &linger,
@@ -386,7 +377,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	{
 		errout(hostname);
 	}
-	debug(DEBUG, "#4");
+	printf("DEBUG #2\n");
 	/*Registramos el establecimiento de conexion en el fichero nntp.log*/
 	/*Limpiamos la cadena*/
 	strcpy(temp, "");
@@ -406,17 +397,51 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	strcat(temp, " ");
 	snprintf(temp2, sizeof(temp2), "%d", clientaddr_in.sin_port); //Este es el puerto efímero
 	strcat(temp, temp2);										  //Metemos puerto efimero
-	debug(DEBUG, "#5");
+	printf("DEBUG #3\n");
 	//Se guarda la información en el fichero
 	if (NULL == (p = (fopen(ficheroLog, "a"))))
 	{
 
 		fprintf(stderr, "No se ha podido abrir el fichero");
 	}
+	printf("DEBUG #4\n");
 	fputs(temp, p); //Ponemos en el fichero la cabecera
+	printf("DEBUG #5\n");
 	fclose(p);
+	printf("DEBUG #6\n");
 
-	debug(DEBUG, "#6");
+	//RESPUESTA AL CLIENTE CUANDO SE HA ESTABLECIDO CONEXION
+	strcpy(conexionRed,"");
+	strcat(conexionRed,"200 Servidor de noticias ");
+	strcat(conexionRed,hostname);
+	strcat(conexionRed," ");
+	strcat(conexionRed,inet_ntoa(clientaddr_in.sin_addr));
+	strcat(conexionRed," ");
+	strcat(conexionRed,(char *)ctime(&timevar));
+	strcat(conexionRed,caracteresRetorno);
+	strcat(conexionRed,"\0");
+	
+	printf("DEBUG #7\n");
+	//Prueba de qué tenemos en conexionRed
+	printf("DEBUG(Salida-envio): %s",conexionRed);
+
+	//Prueba de que tenemos en conexionRed pero en un fichero
+	if (NULL == (envio = (fopen("envio200.txt", "a"))))
+	{
+		fprintf(stderr, "No se ha podido abrir el fichero");
+	}
+	fputs(conexionRed, envio);
+	printf("DEBUG #8\n");
+	fclose(envio);
+	printf("DEBUG #9\n");
+
+	// Enviamos que el servidor esta preparado con un 200
+	if (send(s, conexionRed, BUFFERSIZE, 0) != strlen(conexionRed))
+	{
+		fprintf(stderr, "Servidor: Send error ");
+	}
+	printf("DEBUG #10\n");
+
 	/* Go into a loop, receiving requests from the remote
 		 * client.  After the client has sent the last request,
 		 * it will do a shutdown for sending, which will cause
@@ -427,132 +452,78 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		 * how the server will know that no more requests will
 		 * follow, and the loop will be exited.
 		 */
-	while (len = recv(s, mensaje, TAM_BUFFER, 0))
+	printf("DEBUG #11\n");
+	while (len = recv(s, mensaje, BUFFERSIZE, 0))
 	{
+		
 		if (len == -1)
 			errout(hostname); /* error from recv */
+		printf("[S] He recibido: %s", mensaje);
+		reqcnt++;
 
-		//RESPUESTA AL CLIENTE CUANDO SE HA ESTABLECIDO CONEXION
-		strcpy(respuesta, "");
-		strcpy(conexionRed, "200 Servidor de noticias ");
-		strcat(conexionRed, hostname);
-		strcat(conexionRed, "preparado");
-		strcat(respuesta, conexionRed);
-		strcat(respuesta, " ");
-		if (send(s, respuesta, strlen(respuesta), 0) != strlen(respuesta))
-		{
-			fprintf(stderr, "Servidor: Send error ");
-		}
-		debug(DEBUG, "#16");
 		//COMPROBAR EL TIPO DE CONEXIÓN
-		if (strcmp(vCabecera[0], "LIST") != 0)
+		if (strcmp(mensaje, "LIST") != 0)
 		{
+			printf("DEBUG #LIST\n");
 		}
-		else if (strcmp(vCabecera[0], "NEWGROUPS") != 0)
+		else if (strcmp(mensaje, "NEWGROUPS") != 0)
 		{
+			printf("DEBUG #NEWGROUPS\n");
 		}
-		else if (strcmp(vCabecera[0], "NEWNEWS") != 0)
+		else if (strcmp(mensaje, "NEWNEWS") != 0)
 		{
+			printf("DEBUG #NEWNEWS\n");
 		}
-		else if (strcmp(vCabecera[0], "GROUP") != 0)
+		else if (strcmp(mensaje, "GROUP") != 0)
 		{
+			printf("DEBUG #GROUP\n");
 		}
-		else if (strcmp(vCabecera[0], "ARTICLE") != 0)
+		else if (strcmp(mensaje, "ARTICLE") != 0)
 		{
+			printf("DEBUG #ARTCILE\n");
 		}
-		else if (strcmp(vCabecera[0], "HEAD") != 0)
+		else if (strcmp(mensaje, "HEAD") != 0)
 		{
+			printf("DEBUG #HEAD\n");
 		}
-		else if (strcmp(vCabecera[0], "BODY") != 0)
+		else if (strcmp(mensaje, "BODY") != 0)
 		{
+			printf("DEBUG #BODY\n");
 		}
-		else if (strcmp(vCabecera[0], "POST") != 0)
+		else if (strcmp(mensaje, "POST") != 0)
 		{
+			printf("DEBUG #POST\n");
 		}
-		else if (strcmp(vCabecera[0], "QUIT") != 0)
+		else if (strcmp(mensaje, "QUIT") != 0)
 		{
+			printf("DEBUG #QUIT\n");
 		}
 		else
 		{
-			/*501 NOT IMPLEMENTED*/
+			/*500 Command not recognized*/
 			/*RESPUESTA: */
-			debug(DEBUG, "#17");
-			strcat(respuesta, "501 Not Implemented");
+			printf("DEBUG #501 COMMAND NOT IMPLEMENTED");
+			strcpy(respuesta, "");
+			strcat(respuesta, "500 Command not recognized");
 			strcat(respuesta, caracteresRetorno);
+			strcat(respuesta,"\0");
 
-			/*Metemos tambien la cabecera para el fichero .log*/
-			strcat(temp2, "501 Not Implemented");
-			strcat(temp2, caracteresRetorno);
+			sleep(1); //Tiempo de trabajo del servidor
+			
+			/*Enviamos la respuesta al cliente*/
+			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
+				errout(hostname);
 
-			/*SERVER: */
-			strcat(respuesta, "Server: ");
-			strcat(respuesta, hostname);
-			strcat(respuesta, caracteresRetorno);
 
-			/*CONNECTION: */
-			if (strcmp(vConnection[1], "keep-alive") == 0)
+			/*Metemos en el .log*/
+			if (NULL == (p = (fopen(ficheroLog, "a"))))
 			{
-				/*NO Se cierra la conexion*/
-				strcat(respuesta, "Connection: ");
-				strcat(respuesta, "keep-alive");
-				strcat(respuesta, caracteresRetorno);
-
-				/*FINAL: */
-				strcat(respuesta, caracteresRetorno);
-				strcat(respuesta, "501 Not Implemented\n");
-
-				sleep(1); //Tiempo de trabajo del servidor
-
-				/*Enviamos la respuesta al cliente*/
-				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
-					errout(hostname);
-
-				/* Incrementamos el contador de peticiones */
-				reqcnt++;
-
-				/*Metemos en el .log*/
-				if (NULL == (p = (fopen(ficheroLog, "a"))))
-				{
-
-					fprintf(stderr, "No se ha podido abrir el fichero");
-				}
-				fputs(temp2, p);
-				fclose(p);
+				fprintf(stderr, "No se ha podido abrir el fichero");
 			}
-			else
-			{
-				/*Se cierra la conexion*/
-				strcat(respuesta, "Connection: ");
-				strcat(respuesta, "close");
-				strcat(respuesta, caracteresRetorno);
-
-				/*FINAL: */
-				strcat(respuesta, caracteresRetorno);
-				strcat(respuesta, "501 Not Implemented\n");
-
-				sleep(1); //Tiempo de trabajo del servidor
-
-				/*Enviamos la respuesta al cliente*/
-				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
-					errout(hostname);
-
-				/* Incrementamos el contador de peticiones */
-				reqcnt++;
-				/*Cerramos la conexion*/
-				close(s);
-
-				/*Metemos en el .log*/
-				if (NULL == (p = (fopen(ficheroLog, "a"))))
-				{
-					fprintf(stderr, "No se ha podido abrir el fichero");
-				}
-				debug(DEBUG, "#18");
-				fputs(temp2, p);
-				fclose(p);
-			}
+			fputs(respuesta, p);
+			fclose(p);
 		}
 	}
-
 	/* The loop has terminated, because there are no
 		 * more requests to be serviced.  As mentioned above,
 		 * this close will block until all of the sent replies
@@ -563,24 +534,22 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		 * times printed in the log file to reflect more accurately
 		 * the length of time this connection was used.
 		 */
-	debug(DEBUG, "#19");
+	printf("DEBUG #11\n");
 	close(s);
-	debug(DEBUG, "#20");
+	printf("DEBUG #12\n");
 	/* Log a finishing message. */
 	time(&timevar);
+	printf("DEBUG #13\n");
 	/* The port number must be converted first to host byte
 		 * order before printing.  On most hosts, this is not
 		 * necessary, but the ntohs() call is included here so
 		 * that this program could easily be ported to a host
 		 * that does require it.
 		 */
-	printf("Completed %s port %u, %d requests, at %s\n",
-		   hostname, ntohs(clientaddr_in.sin_port), reqcnt, (char *)ctime(&timevar));
+	printf("Completed %s port %u, %d requests, at %s\n", hostname, ntohs(clientaddr_in.sin_port), reqcnt, (char *)ctime(&timevar));
 }
 
-/*
- *	This routine aborts the child process attending the client.
- */
+//This routine aborts the child process attending the client.
 void errout(char *hostname)
 {
 	printf("Connection with %s aborted on error\n", hostname);
