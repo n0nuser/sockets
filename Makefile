@@ -9,14 +9,11 @@ PROGS = servidor cliente
 
 all: ${PROGS}
 
-servidor: servidor.o utils.o
-	${CC} ${CFLAGS} -o $@ servidor.o utils.o ${LIBS}
+servidor: servidor.o
+	${CC} ${CFLAGS} -o $@ servidor.o ${LIBS}
 
 cliente: cliente.o
 	${CC} ${CFLAGS} -o $@ cliente.o ${LIBS}
-
-utils: utils.o utils.h
-	${CC} ${CFLAGS} -o $@ utils.o ${LIBS}
 
 clean:
 	rm *.o ${PROGS} nntpd.log

@@ -1,0 +1,16 @@
+200 Servidor de noticias localhost 127.0.0.1 Mon Dec 14 17:40:34 2020
+
+200 Servidor de noticias localhost 127.0.0.1 Mon Dec 14 17:42:41 2020
+
+200 Servidor de noticias localhost 127.0.0.1 Mon Dec 14 17:45:16 2020
+
+200 Servidor de noticias localhost 127.0.0.1 Mon Dec 14 17:48:04 2020
+
+200 Servidor de noticias localhost 127.0.0.1 Mon Dec 14 17:48:31 2020
+
+200 Servidor de noticias localhost 127.0.0.1 Mon Dec 14 17:48:48 2020
+
+200 Servidor de noticias localhost 127.0.0.1 Mon Dec 14 17:53:02 2020
+
+200 Servidor de noticias localhost 127.0.0.1 Mon Dec 14 17:56:17 2020
+
