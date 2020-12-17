@@ -9,11 +9,14 @@ PROGS = servidor cliente
 
 all: ${PROGS}
 
-servidor: servidor.o
-	${CC} ${CFLAGS} -o $@ servidor.o ${LIBS}
+servidor: servidor.o utils.o
+	${CC} ${CFLAGS} -o $@ servidor.o utils.o ${LIBS}
 
-cliente: cliente.o
-	${CC} ${CFLAGS} -o $@ cliente.o ${LIBS}
+cliente: cliente.o utils.o
+	${CC} ${CFLAGS} -o $@ cliente.o utils.o ${LIBS}
+
+utils.o: utils.c utils.h
+	${CC} ${CFLAGS} -c -g utils.c ${LIBS}
 
 clean:
-	rm *.o ${PROGS} nntpd.log
+	rm *.o ${PROGS} nntpd.log envio200.txt

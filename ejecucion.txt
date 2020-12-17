@@ -1,0 +1,87 @@
+rm *.o servidor cliente nntpd.log envio200.txt
+gcc    -c -o servidor.o servidor.c
+gcc  -c -g utils.c 
+gcc  -o servidor servidor.o utils.o 
+gcc    -c -o cliente.o cliente.c
+gcc  -o cliente cliente.o utils.o 
+
+Fin de programa servidor!
+[H[2J[3J[C] Connected to localhost on port 56242 at Thu Dec 17 13:44:03 2020
+
+[C] He recibido: 200 Servidor de noticias localhost 127.0.0.1 Thu Dec 17 13:44:03 2020
+
+DEBUG #CLIENTE MANDA: "LISTADO\x0d\x0a"
+[C] Size of buffer: 9
+[C] He recibido: 500 Command not recognized
+
+DEBUG #CLIENTE MANDA: "LIST\x0d\x0a"
+[C] Size of buffer: 6
+[C] He recibido: 500 Command not recognized
+
+DEBUG #CLIENTE MANDA: "GROUP redes\x0d\x0a"
+[C] Size of buffer: 13
+[C] He recibido: 500 Command not recognized
+
+DEBUG #CLIENTE MANDA: "GROUP local.redes\x0d\x0a"
+[C] Size of buffer: 19
+[C] He recibido: 500 Command not recognized
+
+DEBUG #CLIENTE MANDA: "ARTICLE 4\x0d\x0a"
+[C] Size of buffer: 11
+[C] He recibido: 500 Command not recognized
+
+DEBUG #CLIENTE MANDA: "ARTICLE 1\x0d\x0a"
+[C] Size of buffer: 11
+[C] He recibido: 500 Command not recognized
+
+DEBUG #CLIENTE MANDA: "HEAD 1\x0d\x0a"
+[C] Size of buffer: 8
+[C] He recibido: 500 Command not recognized
+
+DEBUG #CLIENTE MANDA: "BODY 1\x0d\x0a"
+[C] Size of buffer: 8
+[C] He recibido: 500 Command not recognized
+
+DEBUG #CLIENTE MANDA: "QUIT\x0d\x0a"
+[C] Size of buffer: 6
+All done at Thu Dec 17 13:44:12 2020
+[S] Startup from localhost port 56242 at Thu Dec 17 13:44:03 2020
+DEBUG(Salida-envio): 200 Servidor de noticias localhost 127.0.0.1 Thu Dec 17 13:44:03 2020
+[S] He recibido: "LISTADO\x0d\x0a"
+[S] Size of mensaje: 9
+[S] He enviado: 500 Command not recognized
+
+[S] He recibido: "LIST\x0d\x0aO\x0d\x0a"
+[S] Size of mensaje: 9
+[S] He enviado: 500 Command not recognized
+
+[S] He recibido: "GROUP redes\x0d\x0a"
+[S] Size of mensaje: 13
+[S] He enviado: 500 Command not recognized
+
+[S] He recibido: "GROUP local.redes\x0d\x0a"
+[S] Size of mensaje: 19
+[S] He enviado: 500 Command not recognized
+
+[S] He recibido: "ARTICLE 4\x0d\x0a.redes\x0d\x0a"
+[S] Size of mensaje: 19
+[S] He enviado: 500 Command not recognized
+
+[S] He recibido: "ARTICLE 1\x0d\x0a.redes\x0d\x0a"
+[S] Size of mensaje: 19
+[S] He enviado: 500 Command not recognized
+
+[S] He recibido: "HEAD 1\x0d\x0a1\x0d\x0a.redes\x0d\x0a"
+[S] Size of mensaje: 19
+[S] He enviado: 500 Command not recognized
+
+[S] He recibido: "BODY 1\x0d\x0a1\x0d\x0a.redes\x0d\x0a"
+[S] Size of mensaje: 19
+[S] He enviado: 500 Command not recognized
+
+[S] He recibido: "QUIT\x0d\x0a\x0d\x0a1\x0d\x0a.redes\x0d\x0a"
+[S] Size of mensaje: 19
+[S] He enviado: 500 Command not recognized
+
+Completed localhost port 56242, 9 requests, at Thu Dec 17 13:44:12 2020
+

@@ -17,6 +17,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include "utils.h"
 
 extern int errno;
 
@@ -27,6 +28,9 @@ extern int errno;
 #define RETRIES 5               //Intentos de recepcion de mensajes
 #define TIMEOUT 6               //Timeout de la señal
 #define MAXHOST 512
+
+char error[] = "\e[91m";
+char normal[] = "\e[0m";
 
 typedef struct
 {
@@ -45,7 +49,7 @@ void handler();
 
 int main(int argc, char *argv[])
 {
-
+    //DEBUG
     FILE *f;
 
     /*Informa del uso si los argumentos pasados al programa son erroneos*/
@@ -84,15 +88,14 @@ void TCP(FILE *f, int argc, char *argv[])
     long timevar;                   /* contains time returned by time() */
     struct sockaddr_in myaddr_in;   /* for local socket address */
     struct sockaddr_in servaddr_in; /* for server socket address */
-    int addrlen, i, j, errcode;
+    int addrlen, len, i, j, errcode;
 
     char aux[7];
-    char envio[BUFFERSIZE];     //String para el envio al servidor
+    char envio[BUFFERSIZE]; //String para el envio al servidor
     char str[BUFFERSIZE];
     char respuesta[BUFFERSIZE]; //String para la respuesta del servidor
     FILE *c;
     char buf[BUFFERSIZE]; /*Contiene lo leido en el fichero linea a linea*/
-    char conexionRed[] = "NNTP";
     char caracteresRetorno[] = "\r\n";
     char vect[3][100];
     char salida[BUFFERSIZE / 2];
@@ -168,30 +171,34 @@ void TCP(FILE *f, int argc, char *argv[])
          * that this program could easily be ported to a host
          * that does require it.
          */
-    printf("[C] Connected to %s on port %u at %s", argv[1], ntohs(myaddr_in.sin_port), (char *)ctime(&timevar));
+    printf("[C] Connected to %s on port %u at %s\n", argv[1], ntohs(myaddr_in.sin_port), (char *)ctime(&timevar));
 
-    //RECIBE EL ESTABLECIMIENTO DE CONEXIÓN DEL SERVIDOR (200 PREPARADO)  
+    //RECIBE EL ESTABLECIMIENTO DE CONEXIÓN DEL SERVIDOR (200 PREPARADO)
     if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
-        {        
-            fprintf(stderr, "%s: error reading result\n", argv[0]);
-            exit(1);
-        }
-
+    {
+        fprintf(stderr, "%s: error reading result\n", argv[0]);
+        exit(1);
+    }
+    // Limpiamos le buffer antes de que empieze a leer
+    strcpy(buf,"");
     /*Se lee el fichero de ordenes correspondiente, linea a linea*/
     while (fgets(buf, BUFFERSIZE, f) != NULL)
     {
-        printf("[C] He recibido: \"%s\"",respuesta);
-        printf("LINEA DE ORDENES (FGETS): %s\n\0", buf);
-        strcat(buf,caracteresRetorno);
-        strcat(buf,"\0");
+        printf("[C] He recibido: %s\n", respuesta);
+        //strcat(buf, caracteresRetorno);
+        strcat(buf, "\0");
         /********************ENVIO**********************/
         /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/
-        if (send(s, buf, BUFFERSIZE, 0) != strlen(buf))
+        printf("DEBUG #CLIENTE MANDA: \"");
+        printChars(buf);
+        printf("\"\n");
+        printf("[C] Size of buffer: %d\n", strlen(buf));
+        len = send(s, buf, strlen(buf), 0);
+        if (len != strlen(buf))
         {
-            fprintf(stderr, "%s: Connection aborted on error ", argv[0]);
+            fprintf(stderr, "%s%s: Connection aborted on error\nMessage was: %s\nLength returned by send() was: %d%s\n", "\e[25;33m", argv[0], buf, len, normal);
             exit(1);
         }
-
         /********************RECEPCION DE RESPUESTA***********************/
         if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
         {
@@ -329,7 +336,6 @@ void UDP(FILE *f, int argc, char *argv[])
     /*Se lee el fichero de ordenes correspondiente, linea a linea*/
     while (fgets(buf, BUFFERSIZE, f) != NULL)
     {
-
 
         /*FINAL: caracteres finales del protocolo*/
         strcat(envio, caracteresRetorno);
