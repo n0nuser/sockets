@@ -315,7 +315,7 @@ char *argv[];
 void serverTCP(int s, struct sockaddr_in clientaddr_in)
 {
 	int reqcnt = 0;			  /* keeps count of number of requests */
-	char mensaje[BUFFERSIZE]; /* This example uses BUFFERSIZE byte messages. */
+	char mensaje[BUFFERSIZE]=""; /* This example uses BUFFERSIZE byte messages. */
 	char hostname[MAXHOST];	  /* remote host's name string */
 
 	int len, len1, status;
@@ -395,7 +395,8 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 
 	strcat(temp, " ");
 	snprintf(temp2, sizeof(temp2), "%d", clientaddr_in.sin_port); //Este es el puerto efímero
-	strcat(temp, temp2);										  //Metemos puerto efimero
+	strcat(temp, temp2);
+	strcat(temp,"\n");										  //Metemos puerto efimero
 	//Se guarda la información en el fichero
 	if (NULL == (p = (fopen(ficheroLog, "a"))))
 	{
@@ -417,15 +418,15 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	//strcat(conexionRed,"\0");
 	
 	//Prueba de qué tenemos en conexionRed
-	printf("DEBUG(Salida-envio): %s",conexionRed);
+	printf("[S] He enviado: %s",conexionRed);
 
 	//Prueba de que tenemos en conexionRed pero en un fichero
-	if (NULL == (envio = (fopen("envio200.txt", "a"))))
+	if (NULL == (p = (fopen(ficheroLog, "a"))))
 	{
 		fprintf(stderr, "No se ha podido abrir el fichero");
 	}
-	fputs(conexionRed, envio);
-	fclose(envio);
+	fputs(conexionRed, p);
+	fclose(p);
 
 	// Enviamos que el servidor esta preparado con un 200
 	if (send(s, conexionRed, BUFFERSIZE, 0) != strlen(conexionRed))
@@ -447,53 +448,65 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	{
 		if (len == -1)
 			errout(hostname); /* error from recv */
+		//strcat(mensaje,"\0");
 		printf("[S] He recibido: \"");
 		printChars(mensaje);
 		printf("\"\n");
-		printf("[S] Size of mensaje: %d\n", strlen(mensaje));
+		printf("[S] Size of mensaje: %ld\n", strlen(mensaje));
 		reqcnt++;
+
+		//Eliminamos los caracteres de retorno que nos llegan del cliente
+		strtok(mensaje,caracteresRetorno);
 
 		//COMPROBAR EL TIPO DE CONEXIÓN
 		if (strcmp(mensaje, "LIST") == 0)
 		{
 			printf("DEBUG #LIST\n");
+			break;
 		}
 		else if (strcmp(mensaje, "NEWGROUPS") == 0)
 		{
 			printf("DEBUG #NEWGROUPS\n");
+			break;
 		}
 		else if (strcmp(mensaje, "NEWNEWS") == 0)
 		{
 			printf("DEBUG #NEWNEWS\n");
+			break;
 		}
 		else if (strcmp(mensaje, "GROUP") == 0)
 		{
 			printf("DEBUG #GROUP\n");
+			break;
 		}
 		else if (strcmp(mensaje, "ARTICLE") == 0)
 		{
 			printf("DEBUG #ARTICLE\n");
+			break;
 		}
 		else if (strcmp(mensaje, "HEAD") == 0)
 		{
 			printf("DEBUG #HEAD\n");
+			break;
 		}
 		else if (strcmp(mensaje, "BODY") == 0)
 		{
 			printf("DEBUG #BODY\n");
+			break;
 		}
 		else if (strcmp(mensaje, "POST") == 0)
 		{
 			printf("DEBUG #POST\n");
+			break;
 		}
 		else if (strcmp(mensaje, "QUIT") == 0)
 		{
 			printf("DEBUG #QUIT\n");
+			break;
 		}
 		else
 		{
-			/*500 Command not recognized*/
-			/*RESPUESTA: */
+			//Respuesta - 500 Command not recognized
 			strcpy(respuesta, "");
 			strcat(respuesta, "500 Command not recognized");
 			strcat(respuesta, caracteresRetorno);
@@ -501,12 +514,12 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 
 			sleep(1); //Tiempo de trabajo del servidor
 			
-			/*Enviamos la respuesta al cliente*/
+			//Enviamos la respuesta al cliente
 			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 				errout(hostname);
 			printf("[S] He enviado: %s\n", respuesta);
 
-			/*Metemos en el .log*/
+			//Introducimos la respuesta al fichero .log
 			if (NULL == (p = (fopen(ficheroLog, "a"))))
 			{
 				fprintf(stderr, "No se ha podido abrir el fichero");
@@ -514,7 +527,12 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			fputs("\n",p);
 			fputs(respuesta, p);
 			fclose(p);
+
+			printf("[DEBUG] Se ha guardado la repuesta\n");
+			memset(mensaje, 0, sizeof mensaje);
+			printf("MENSAJE: %s\n",mensaje);			
 		}
+		
 	}
 	/* The loop has terminated, because there are no
 		 * more requests to be serviced.  As mentioned above,
