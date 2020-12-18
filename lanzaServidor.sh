@@ -3,7 +3,9 @@
 # las ordenes est�n en un fichero que se pasa como tercer par�metro
 pkill servidor
 pkill cliente
+sleep 1
 clear
+
 ./servidor
 #./cliente nogal TCP ordenes1.txt &
 #./cliente nogal TCP ordenes2.txt &

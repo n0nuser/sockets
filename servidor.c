@@ -328,14 +328,15 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	//VARIABLES PARA NNTP
 	char conexionRed[BUFFERSIZE] = "";
 	char caracteresRetorno[] = "\r\n";
-	FILE *p, *envio;		  //Puntero al archivo del registro
+	FILE *p, *g;		  //Puntero al archivo del registro
 	struct dirent *dt;				  //Estructura donde estará la información sobre el archivo que se esta "sacando" en cada momento
-	char ficheroLog[] = "nntpd.log";  //Nombre del archivo del registro
-	char pathToWorkspace[BUFFERSIZE]; //Ruta al directorio del codigo fuente
-	char dirOrdenes[] = "/ordenes";	  //Nombre del directorio de ficheros html
 	char respuesta[BUFFERSIZE];		  //Envio de respuesta al cliente
 	char temp[BUFFERSIZE];			  //Cadena auxiliar
 	char temp2[50];
+
+	//VARIABLES FICHEROS
+	char pathGrupos[] = "nntp/noticias/grupos"; //Nombre del archivo group, para LIST
+	char ficheroLog[] = "nntpd.log"; //Nombre del archivo de peticiones
 
 	/* Look up the host information for the remote host
 	 * that we have connected with.  Its internet address
@@ -418,7 +419,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	//strcat(conexionRed,"\0");
 	
 	//Prueba de qué tenemos en conexionRed
-	printf("[S] He enviado: %s",conexionRed);
+	printf("\e[93mDEBUG\e[0m [S] He enviado: %s",conexionRed);
 
 	//Prueba de que tenemos en conexionRed pero en un fichero
 	if (NULL == (p = (fopen(ficheroLog, "a"))))
@@ -452,7 +453,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		printf("[S] He recibido: \"");
 		printChars(mensaje);
 		printf("\"\n");
-		printf("[S] Size of mensaje: %ld\n", strlen(mensaje));
+		printf("\e[93mDEBUG\e[0m [S] Size of mensaje: %ld\n", strlen(mensaje));
 		reqcnt++;
 
 		//Eliminamos los caracteres de retorno que nos llegan del cliente
@@ -461,47 +462,52 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		//COMPROBAR EL TIPO DE CONEXIÓN
 		if (strcmp(mensaje, "LIST") == 0)
 		{
-			printf("DEBUG #LIST\n");
-			break;
+			printf("\e[93mDEBUG\e[0m #LIST\n");
+			list(respuesta,pathGrupos,g);
+			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
+				errout(hostname);
+			printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
+			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(mensaje, "NEWGROUPS") == 0)
 		{
-			printf("DEBUG #NEWGROUPS\n");
-			break;
+			printf("\e[93mDEBUG\e[0m #NEWGROUPS\n");
+			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(mensaje, "NEWNEWS") == 0)
 		{
-			printf("DEBUG #NEWNEWS\n");
-			break;
+			printf("\e[93mDEBUG\e[0m #NEWNEWS\n");
+			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(mensaje, "GROUP") == 0)
 		{
-			printf("DEBUG #GROUP\n");
-			break;
+			printf("\e[93mDEBUG\e[0m #GROUP\n");
+			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(mensaje, "ARTICLE") == 0)
 		{
-			printf("DEBUG #ARTICLE\n");
-			break;
+			printf("\e[93mDEBUG\e[0m #ARTICLE\n");
+			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(mensaje, "HEAD") == 0)
 		{
-			printf("DEBUG #HEAD\n");
-			break;
+			printf("\e[93mDEBUG\e[0m #HEAD\n");
+			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(mensaje, "BODY") == 0)
 		{
-			printf("DEBUG #BODY\n");
-			break;
+			printf("\e[93mDEBUG\e[0m #BODY\n");
+			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(mensaje, "POST") == 0)
 		{
-			printf("DEBUG #POST\n");
-			break;
+			printf("\e[93mDEBUG\e[0m #POST\n");
+			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(mensaje, "QUIT") == 0)
 		{
-			printf("DEBUG #QUIT\n");
+			printf("\e[93mDEBUG\e[0m #QUIT\n");
+			memset(mensaje, 0, sizeof mensaje);
 			break;
 		}
 		else
@@ -517,7 +523,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			//Enviamos la respuesta al cliente
 			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 				errout(hostname);
-			printf("[S] He enviado: %s\n", respuesta);
+			printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 
 			//Introducimos la respuesta al fichero .log
 			if (NULL == (p = (fopen(ficheroLog, "a"))))
@@ -528,7 +534,6 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			fputs(respuesta, p);
 			fclose(p);
 
-			printf("[DEBUG] Se ha guardado la repuesta\n");
 			memset(mensaje, 0, sizeof mensaje);
 			printf("MENSAJE: %s\n",mensaje);			
 		}

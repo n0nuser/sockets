@@ -49,7 +49,7 @@ void handler();
 
 int main(int argc, char *argv[])
 {
-    //DEBUG
+    //\e[93mDEBUG\e[0m
     FILE *f;
 
     /*Informa del uso si los argumentos pasados al programa son erroneos*/
@@ -186,6 +186,7 @@ void TCP(FILE *f, int argc, char *argv[])
     while (fgets(buf, BUFFERSIZE, f) != NULL)
     {      
         printf("[C] He recibido: %s\n", respuesta);
+        memset(respuesta, 0, BUFFERSIZE);
         /*
         //Vaciamos el vector que contendra cada argumento de la orden
         for(i=0; i<2; i++) {
@@ -223,17 +224,16 @@ void TCP(FILE *f, int argc, char *argv[])
             fprintf(stderr, "%s%s: Connection aborted on error\nMessage was: %s\nLength returned by send() was: %d%s\n", "\e[25;33m", argv[0], buf, len, normal);
             exit(1);
         }
-        printf("DEBUG [C] He enviado: \"");
+        printf("\e[93mDEBUG\e[0m [C] He enviado: \"");
         printChars(buf);
         printf("\"\n");
-        printf("[C] Size of buffer: %ld\n", strlen(buf));
+        printf("\e[93mDEBUG\e[0m [C] Size of buffer: %ld\n", strlen(buf));
         /********************RECEPCION DE RESPUESTA***********************/
         if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
         {
             fprintf(stderr, "%s: error reading result\n", argv[0]);
             exit(1);
         }
-        memset(respuesta, 0, BUFFERSIZE);
     }
     /* Now, shutdown the connection for further sends.
          * This will cause the server to receive an end-of-file
