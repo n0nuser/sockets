@@ -90,14 +90,15 @@ void TCP(FILE *f, int argc, char *argv[])
     struct sockaddr_in servaddr_in; /* for server socket address */
     int addrlen, len, i, j, errcode;
 
-    char aux[7];
+    
     char envio[BUFFERSIZE]; //String para el envio al servidor
     char str[BUFFERSIZE];
     char respuesta[BUFFERSIZE]; //String para la respuesta del servidor
     FILE *c;
+    char *aux;
     char buf[BUFFERSIZE]; /*Contiene lo leido en el fichero linea a linea*/
     char caracteresRetorno[] = "\r\n";
-    char vect[3][100];
+    char token[3][100];
     char salida[BUFFERSIZE / 2];
     int q = 0, p = 0;
 
@@ -183,28 +184,56 @@ void TCP(FILE *f, int argc, char *argv[])
     strcpy(buf,"");
     /*Se lee el fichero de ordenes correspondiente, linea a linea*/
     while (fgets(buf, BUFFERSIZE, f) != NULL)
-    {
+    {      
         printf("[C] He recibido: %s\n", respuesta);
-        //strcat(buf, caracteresRetorno);
-        strcat(buf, "\0");
+        /*
+        //Vaciamos el vector que contendra cada argumento de la orden
+        for(i=0; i<2; i++) {
+            strcpy(token[i], "");
+        }
+        q = 0;
+        //Separamos la linea leida en tokens delimitados por espacios
+        aux = strtok(buf, " ");   
+
+        while(aux != NULL){
+            strcpy(token[q], aux);
+            // Seguimos con el siguiente token
+            aux = strtok(NULL, " ");
+            q++;                 
+        }
+
+        //Si no existe algun dato que acompañe a la orden
+        if(!strcmp(token[2], "")){
+            //Quitamos los caracteres finales a la pagina para que no de problemas
+            aux = strtok(token[1], caracteresRetorno);
+            strcpy(token[1], aux);                                  
+        }
+
+        strcpy(envio, token[0]);
+        strcat(envio, " ");
+        strcat(envio, token[1]);                  
+        strcat(envio, caracteresRetorno);        
+        */                  
+                
         /********************ENVIO**********************/
-        /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/
-        printf("DEBUG #CLIENTE MANDA: \"");
-        printChars(buf);
-        printf("\"\n");
-        printf("[C] Size of buffer: %d\n", strlen(buf));
+        /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/        
         len = send(s, buf, strlen(buf), 0);
         if (len != strlen(buf))
         {
             fprintf(stderr, "%s%s: Connection aborted on error\nMessage was: %s\nLength returned by send() was: %d%s\n", "\e[25;33m", argv[0], buf, len, normal);
             exit(1);
         }
+        printf("DEBUG [C] He enviado: \"");
+        printChars(buf);
+        printf("\"\n");
+        printf("[C] Size of buffer: %ld\n", strlen(buf));
         /********************RECEPCION DE RESPUESTA***********************/
         if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
         {
             fprintf(stderr, "%s: error reading result\n", argv[0]);
             exit(1);
         }
+        memset(respuesta, 0, BUFFERSIZE);
     }
     /* Now, shutdown the connection for further sends.
          * This will cause the server to receive an end-of-file

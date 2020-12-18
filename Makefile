@@ -19,4 +19,4 @@ utils.o: utils.c utils.h
 	${CC} ${CFLAGS} -c -g utils.c ${LIBS}
 
 clean:
-	rm *.o ${PROGS} nntpd.log envio200.txt
+	rm *.o ${PROGS} nntpd.log
