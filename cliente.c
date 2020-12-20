@@ -91,16 +91,15 @@ void TCP(FILE *f, int argc, char *argv[])
     int addrlen, len, i, j, errcode;
 
     
-    char envio[BUFFERSIZE]; //String para el envio al servidor
+    
     char str[BUFFERSIZE];
     char respuesta[BUFFERSIZE]; //String para la respuesta del servidor
     FILE *c;
-    char *aux;
+    
     char buf[BUFFERSIZE]; /*Contiene lo leido en el fichero linea a linea*/
     char caracteresRetorno[] = "\r\n";
-    char token[3][100];
     char salida[BUFFERSIZE / 2];
-    int q = 0, p = 0;
+    
 
     /* Create the socket. */
     s = socket(AF_INET, SOCK_STREAM, 0);
@@ -186,36 +185,8 @@ void TCP(FILE *f, int argc, char *argv[])
     while (fgets(buf, BUFFERSIZE, f) != NULL)
     {      
         printf("[C] He recibido: %s\n", respuesta);
-        memset(respuesta, 0, BUFFERSIZE);
-        /*
-        //Vaciamos el vector que contendra cada argumento de la orden
-        for(i=0; i<2; i++) {
-            strcpy(token[i], "");
-        }
-        q = 0;
-        //Separamos la linea leida en tokens delimitados por espacios
-        aux = strtok(buf, " ");   
-
-        while(aux != NULL){
-            strcpy(token[q], aux);
-            // Seguimos con el siguiente token
-            aux = strtok(NULL, " ");
-            q++;                 
-        }
-
-        //Si no existe algun dato que acompañe a la orden
-        if(!strcmp(token[2], "")){
-            //Quitamos los caracteres finales a la pagina para que no de problemas
-            aux = strtok(token[1], caracteresRetorno);
-            strcpy(token[1], aux);                                  
-        }
-
-        strcpy(envio, token[0]);
-        strcat(envio, " ");
-        strcat(envio, token[1]);                  
-        strcat(envio, caracteresRetorno);        
-        */                  
-                
+        memset(respuesta, 0, BUFFERSIZE);    
+                                    
         /********************ENVIO**********************/
         /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/        
         len = send(s, buf, strlen(buf), 0);
