@@ -38,84 +38,91 @@ void list(char *content, char *ficheroGroup, FILE *g)
     }
 }
 
-void group (char *content, char * ficheroGroup, FILE *g) 
+int group(char *content, char *ficheroGroup, FILE *g, char *grupo)
 {
-    char buffer[BUFFERSIZE];
-    char ultimo[BUFFERSIZE] ="";
-    char primero[BUFFERSIZE]="";
-    char total[BUFFERSIZE]="";
-    char trozos[20][BUFFERSIZE];
-    char lineas[20][BUFFERSIZE];
+    char buffer[BUFFERSIZE], ultimo[BUFFERSIZE] = "", primero[BUFFERSIZE] = "", total[BUFFERSIZE] = "";
     char *aux, *s;
-    int q = 0, l = 0, contLineas = 0;
+    char trozos[3][BUFFERSIZE];
+    int q = 0;
     strcpy(content, "211 ");
+    printf("\e[94mFICHEROGROUP: %s\e[0m\n", ficheroGroup);
     if (NULL == (g = (fopen(ficheroGroup, "r"))))
     {
         fprintf(stderr, "Error en la apertura del fichero %s\n", ficheroGroup);
         exit(2);
     }
-     
-    for(l = 0; l < 20; l++) {
-        strcpy(lineas[l],"");
-    }
-    l = 0; 
-    
+
+    //Se lee el fichero y se mete en el vector
     while (fgets(buffer, BUFFERSIZE, g) != NULL)
     {
-        strcpy(lineas[l], buffer);
-        l++;
-        contLineas++;       
-    }
+        //Extrae el primer token de la línea
+        aux = strtok(buffer, " ");
+        printf("\e[95mAUX   : \"%s\"\e[0m\n", aux);
+        printf("\e[94mGRUPO : \"%s\"\e[0m\n", grupo);
 
-    for(l = 0; l < contLineas; l++) {
+        //Si son iguales
+        if (strcmp(aux, grupo) == 0)
+        {
+            while (aux != NULL)
+            {
+                strcpy(trozos[q], aux);
+                // Seguimos con el siguiente token
+                aux = strtok(NULL, " ");
+                q++;
+            }
 
-        for(int i = 0; i < 20; i++) {
-        strcpy(trozos[i],"");
-        } 
-        //Separamos la linea leida en tokens delimitados por espacios
-        aux = strtok(lineas[l], " ");   
-        while(aux != NULL){
-            strcpy(trozos[q], aux);
-            // Seguimos con el siguiente token
-            aux = strtok(NULL, " ");
-            q++;                 
-        }                   
-
-    if(strcmp(trozos[0],"local.redes") == 0) {
             s = trozos[1];
-            while (*s && *s == '0') s++;
+            while (*s && *s == '0')
+                s++;
             strcpy(ultimo, s);
 
             s = trozos[2];
-            while (*s && *s == '0') s++;
+            while (*s && *s == '0')
+                s++;
             strcpy(primero, s);
 
-            sprintf(total,"%d",atoi(ultimo)-atoi(primero)+1);
-            strcat(content,total);
-            strcat(content," ");
-            strcat(content,primero);
-            strcat(content," ");
-            strcat(content,ultimo);
-            strcat(content," ");
-            strcat(content,trozos[0]);
-        } else if (strcmp(trozos[0],"local.deportes") == 0){
-            s = trozos[1];
-            while (*s && *s == '0') s++;
-            strcpy(ultimo, s);
+            sprintf(total, "%d", atoi(ultimo) - atoi(primero) + 1);
+            strcat(content, total);
+            strcat(content, " ");
+            strcat(content, primero);
+            strcat(content, " ");
+            strcat(content, ultimo);
+            strcat(content, " ");
+            strcat(content, grupo);
 
-            s = trozos[2];
-            while (*s && *s == '0') s++;
-            strcpy(primero, s);
-
-            sprintf(total,"%d",atoi(ultimo)-atoi(primero)+1);
-            strcat(content,total);
-            strcat(content," ");
-            strcat(content,primero);
-            strcat(content," ");
-            strcat(content,ultimo);
-            strcat(content," ");
-            strcat(content,trozos[0]);
+            //Concatena el contenido de la línea al 211 y se pone en "content"
+            printf("\e[95mCONTENT: %s\e[0m\n", content);
+            return 1;
         }
-    }   
+    }
+    return 0;
+}
+
+int article(char *content, char *pathArticulos, FILE *a, char *articulo, char *grupo)
+{
+    char *aux, tempGrupo[100], pathGrupo[BUFFERSIZE], buffer[BUFFERSIZE];
+    strcpy(tempGrupo, grupo);
+    aux = strtok(tempGrupo, ".");
+    aux = strtok(NULL, " ");
+    strcpy(tempGrupo, aux);
+    printf("\e[93mGRUPO %s\e[0m\n", tempGrupo);
     
+    strcpy(pathGrupo, pathArticulos);
+    strcat(pathGrupo, tempGrupo);
+    strcat(pathGrupo, "/");
+    //RESULTADO PATH FICHERO
+    strcat(pathGrupo, articulo);
+    strtok(pathGrupo,"\r\n");
+
+    printf("\e[93mPATH.FICHERO %s\e[0m\n", pathGrupo);
+    if (NULL == (a = (fopen(pathGrupo, "r"))))
+    {
+        printf("\e[94mError en la apertura del fichero %s\e[0m\n", pathGrupo);
+        return 0;
+    }
+    while (fgets(buffer, BUFFERSIZE, a) != NULL)
+    {
+        strcat(content, buffer);
+    }
+    return 1;
 }

@@ -2,7 +2,6 @@ LISTADO
 LIST
 GROUP redes
 GROUP local.redes
-GROUP local.deportes
 ARTICLE 4
 ARTICLE 1
 HEAD 1

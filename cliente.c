@@ -195,10 +195,10 @@ void TCP(FILE *f, int argc, char *argv[])
             fprintf(stderr, "%s%s: Connection aborted on error\nMessage was: %s\nLength returned by send() was: %d%s\n", "\e[25;33m", argv[0], buf, len, normal);
             exit(1);
         }
-        printf("\e[93mDEBUG\e[0m [C] He enviado: \"");
+        printf("\e[93mDEBUG [C]\e[0m He enviado: \"");
         printChars(buf);
         printf("\"\n");
-        printf("\e[93mDEBUG\e[0m [C] Size of buffer: %ld\n", strlen(buf));
+        printf("\e[93mDEBUG [C]\e[0m Size of buffer: %ld\n", strlen(buf));
         /********************RECEPCION DE RESPUESTA***********************/
         if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
         {
