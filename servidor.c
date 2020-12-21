@@ -314,9 +314,10 @@ char *argv[];
 
 void serverTCP(int s, struct sockaddr_in clientaddr_in)
 {
-	int reqcnt = 0;			  /* keeps count of number of requests */
-	char mensaje[BUFFERSIZE]=""; /* This example uses BUFFERSIZE byte messages. */
-	char hostname[MAXHOST];	  /* remote host's name string */
+	//DEBUG - Cambiar variable BUFFERSIZE por una más acorde a cada caso
+	int reqcnt = 0;				   /* keeps count of number of requests */
+	char mensaje[BUFFERSIZE] = ""; /* This example uses BUFFERSIZE byte messages. */
+	char hostname[MAXHOST];		   /* remote host's name string */
 
 	int len, len1, status;
 	struct hostent *hp; /* pointer to host info for remote host */
@@ -328,20 +329,22 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	//VARIABLES PARA NNTP
 	char conexionRed[BUFFERSIZE] = "";
 	char caracteresRetorno[] = "\r\n";
-	FILE *p, *g;		  //Puntero al archivo del registro
-	struct dirent *dt;				  //Estructura donde estará la información sobre el archivo que se esta "sacando" en cada momento
-	char respuesta[BUFFERSIZE];		  //Envio de respuesta al cliente
-	char temp[BUFFERSIZE];			  //Cadena auxiliar
+	FILE *p, *g, *a;				//Puntero al archivo del registro
+	struct dirent *dt;			//Estructura donde estará la información sobre el archivo que se esta "sacando" en cada momento
+	char respuesta[BUFFERSIZE]; //Envio de respuesta al cliente
+	char temp[BUFFERSIZE];		//Cadena auxiliar
 	char temp2[50];
+	char grupoElegido[BUFFERSIZE]="";
 
 	//VARIABLES FICHEROS
 	char pathGrupos[] = "nntp/noticias/grupos"; //Nombre del archivo group, para LIST
-	char ficheroLog[] = "nntpd.log"; //Nombre del archivo de peticiones
+	char pathArticulos[] = "nntp/noticias/articulos/local/"; //Nombre del archivo group, para LIST
+	char ficheroLog[] = "nntpd.log";			//Nombre del archivo de peticiones
 
 	char *aux;
-    char token[3][100];
-    char envio[BUFFERSIZE]; //String para el envio al servidor
-    int q = 0,i=0;
+	char token[3][100];
+	char envio[BUFFERSIZE]; //String para el envio al servidor
+	int q = 0, i = 0;
 
 	/* Look up the host information for the remote host
 	 * that we have connected with.  Its internet address
@@ -402,7 +405,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	strcat(temp, " ");
 	snprintf(temp2, sizeof(temp2), "%d", clientaddr_in.sin_port); //Este es el puerto efímero
 	strcat(temp, temp2);
-	strcat(temp,"\n");										  //Metemos puerto efimero
+	strcat(temp, "\n"); //Metemos puerto efimero
 	//Se guarda la información en el fichero
 	if (NULL == (p = (fopen(ficheroLog, "a"))))
 	{
@@ -413,18 +416,18 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	fclose(p);
 
 	//RESPUESTA AL CLIENTE CUANDO SE HA ESTABLECIDO CONEXION
-	strcpy(conexionRed,"");
-	strcat(conexionRed,"200 Servidor de noticias ");
-	strcat(conexionRed,hostname);
-	strcat(conexionRed," ");
-	strcat(conexionRed,inet_ntoa(clientaddr_in.sin_addr));
-	strcat(conexionRed," ");
-	strcat(conexionRed,(char *)ctime(&timevar));
+	strcpy(conexionRed, "");
+	strcat(conexionRed, "200 Servidor de noticias ");
+	strcat(conexionRed, hostname);
+	strcat(conexionRed, " ");
+	strcat(conexionRed, inet_ntoa(clientaddr_in.sin_addr));
+	strcat(conexionRed, " ");
+	strcat(conexionRed, (char *)ctime(&timevar));
 	//strcat(conexionRed,caracteresRetorno);
 	//strcat(conexionRed,"\0");
-	
+
 	//Prueba de qué tenemos en conexionRed
-	printf("\e[93mDEBUG\e[0m [S] He enviado: %s",conexionRed);
+	printf("\e[93mDEBUG\e[0m [S] He enviado: %s", conexionRed);
 
 	//Prueba de que tenemos en conexionRed pero en un fichero
 	if (NULL == (p = (fopen(ficheroLog, "a"))))
@@ -452,41 +455,45 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		 */
 	while (len = recv(s, mensaje, BUFFERSIZE, 0))
 	{
-		
+
 		//Vaciamos el vector que contendra cada argumento de la orden
-        for(i=0; i<2; i++) {
-            strcpy(token[i], "");
-        }
-        q = 0;
-        //Separamos la linea leida en tokens delimitados por espacios
-        aux = strtok(mensaje, " ");   
+		for (i = 0; i < 2; i++)
+		{
+			strcpy(token[i], "");
+		}
+		q = 0;
+		//Separamos la linea leida en tokens delimitados por espacios
+		aux = strtok(mensaje, " ");
 
-        while(aux != NULL){
-            strcpy(token[q], aux);
-            // Seguimos con el siguiente token
-            aux = strtok(NULL, " ");
-            q++;                 
-        }
+		while (aux != NULL)
+		{
+			strcpy(token[q], aux);
+			// Seguimos con el siguiente token
+			aux = strtok(NULL, " ");
+			q++;
+		}
 
-        //Si no existe algun dato que acompañe a la orden
-        if(!strcmp(token[1],"")){
-            //Quitamos los caracteres finales a la pagina para que no de problemas
-            aux = strtok(token[0], caracteresRetorno);
-            strcpy(token[0], aux);
-			strcpy(envio, token[0]);       
-			strcat(envio, caracteresRetorno);                            
-        } else {
+		//Si no existe algun dato que acompañe a la orden
+		if (!strcmp(token[1], ""))
+		{
+			//Quitamos los caracteres finales a la pagina para que no de problemas
+			aux = strtok(token[0], caracteresRetorno);
+			strcpy(token[0], aux);
+			strcpy(envio, token[0]);
+			strcat(envio, caracteresRetorno);
+		}
+		else
+		{
 			strcpy(envio, token[0]);
 			strcat(envio, " ");
 			strcat(envio, token[1]);
-			//strcat(envio, caracteresRetorno); 			
+			//strcat(envio, caracteresRetorno);
 		}
-		
-		printf("ENVIO: \"");
+
+		printf("\e[93mDEBUG # ENVIO\e[0m: \"");
 		printChars(envio);
 		printf("\" ");
-		printf("Size of mensaje: %ld\n", strlen(envio));
-        
+		printf("\e[93mDEBUG # Size of mensaje: \e[0m%ld\n", strlen(envio));
 
 		/*
         strcat(envio, " ");
@@ -500,60 +507,60 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		printf("[S] He recibido: \"");
 		printChars(mensaje);
 		printf("\"\n");
-		printf("\e[93mDEBUG\e[0m [S] Size of mensaje: %ld\n", strlen(mensaje));
+		printf("\e[93mDEBUG [S]\e[0m Size of mensaje: %ld\n", strlen(mensaje));
 		reqcnt++;
 
 		//Eliminamos los caracteres de retorno que nos llegan del cliente
-		strtok(mensaje,caracteresRetorno);
-		strtok(envio,caracteresRetorno);
+		strtok(mensaje, caracteresRetorno);
+		strtok(envio, caracteresRetorno);
 
 		//COMPROBAR EL TIPO DE CONEXIÓN
 		if (strcmp(envio, "LIST") == 0)
 		{
 			//printf("\e[93mDEBUG\e[0m #LIST\n");
-			list(respuesta,pathGrupos,g);
-			sleep(3);
+			list(respuesta, pathGrupos, g);
+			//sleep(3);
 			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 				errout(hostname);
-			printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
+			printf("\e[93mDEBUG [S]\e[0m He enviado: %s\n", respuesta);
 			memset(mensaje, 0, sizeof mensaje);
 			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta,0,BUFFERSIZE);
+			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(mensaje, "NEWGROUPS") == 0)
 		{
-			printf("\e[93mDEBUG\e[0m #NEWGROUPS\n");
+			printf("\n\e[93mDEBUG\e[0m #ORDEN NEWGROUPS\n");
 			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(mensaje, "NEWNEWS") == 0)
 		{
-			printf("\e[93mDEBUG\e[0m #NEWNEWS\n");
+			printf("\n\e[93mDEBUG\e[0m #ORDEN NEWNEWS\n");
 			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(token[0], "GROUP") == 0)
 		{
-			printf("\e[93mDEBUG\e[0m #GROUP\n");
-			printf("GROUP: ");
-			printChars(token[1]);
-			printf("\n");
-			strtok(token[1],caracteresRetorno);
+			printf("\n\e[93mDEBUG\e[0m #ORDEN GROUP: %s\n",token[1]);
+			strtok(token[1], caracteresRetorno);
 			//Ahora tratamos el segundo trozo que llega del group
-			if(strcmp(token[1],"local.redes") == 0 || strcmp(token[1],"local.deportes") == 0) {
-				printf("\e[93mDEBUG\e[0m #local.redes\n");
-				group(respuesta,pathGrupos,g);
-				sleep(3);
+			// 
+			if (group(respuesta, pathGrupos, g , token[1]))
+			{
+				//sleep(3);
+				strcpy(grupoElegido, token[1]);
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
-				errout(hostname);
+					errout(hostname);
 				printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
-			} else {
-				//Respuesta - 501 Syntax error in command
+			}
+			else
+			{
+				//Respuesta - 411 No such newsgroup
 				strcpy(respuesta, "");
-				strcat(respuesta, "501 Syntax error in command");
+				strcat(respuesta, "411 No such newsgroup");
 				strcat(respuesta, caracteresRetorno);
-				strcat(respuesta,"\0");
+				strcat(respuesta, "\0");
 
-				sleep(3); //Tiempo de trabajo del servidor
-				
+				//sleep(3); //Tiempo de trabajo del servidor
+
 				//Enviamos la respuesta al cliente
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 					errout(hostname);
@@ -561,31 +568,71 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			}
 			memset(mensaje, 0, sizeof mensaje);
 			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta,0,BUFFERSIZE);
+			memset(respuesta, 0, BUFFERSIZE);
 		}
-		else if (strcmp(mensaje, "ARTICLE") == 0)
-		{
-			printf("\e[93mDEBUG\e[0m #ARTICLE\n");
+		else if (strcmp(token[0], "ARTICLE") == 0)
+		{			
+			printf("\n\e[93mDEBUG\e[0m #ORDEN ARTICLE\n");
+			printf("\e[93mDEBUG #GRUPO ELEGIDO\e[0m: \"");
+			printChars(grupoElegido);
+			printf("\"\n");
+			
+			if(strcmp(grupoElegido,"") != 0) {
+				if(article(respuesta,pathArticulos, a, token[1], grupoElegido)){
+					if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
+					errout(hostname);
+				printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
+				}
+				else{
+				//Respuesta - 423  No article with that number
+				strcpy(respuesta, "");
+				strcat(respuesta, "423  No article with that number");
+				strcat(respuesta, caracteresRetorno);
+				strcat(respuesta, "\0");
+
+				//sleep(3); //Tiempo de trabajo del servidor
+
+				//Enviamos la respuesta al cliente
+				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
+					errout(hostname);
+				printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
+				}
+			} else {
+				//Respuesta - 411 No such newsgroup
+				strcpy(respuesta, "");
+				strcat(respuesta, "412 No newsgroup selected");
+				strcat(respuesta, caracteresRetorno);
+				strcat(respuesta, "\0");
+
+				//sleep(3); //Tiempo de trabajo del servidor
+
+				//Enviamos la respuesta al cliente
+				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
+					errout(hostname);
+				printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
+			}
 			memset(mensaje, 0, sizeof mensaje);
+			memset(envio, 0, BUFFERSIZE);
+			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(mensaje, "HEAD") == 0)
 		{
-			printf("\e[93mDEBUG\e[0m #HEAD\n");
+			printf("\n\e[93mDEBUG\e[0m #ORDEN HEAD\n");
 			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(mensaje, "BODY") == 0)
 		{
-			printf("\e[93mDEBUG\e[0m #BODY\n");
+			printf("\n\e[93mDEBUG\e[0m #ORDEN BODY\n");
 			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(mensaje, "POST") == 0)
 		{
-			printf("\e[93mDEBUG\e[0m #POST\n");
+			printf("\n\e[93mDEBUG\e[0m #ORDEN POST\n");
 			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(mensaje, "QUIT") == 0)
 		{
-			printf("\e[93mDEBUG\e[0m #QUIT\n");
+			printf("\n\e[93mDEBUG\e[0m #ORDEN QUIT\n");
 			memset(mensaje, 0, sizeof mensaje);
 			break;
 		}
@@ -595,10 +642,10 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			strcpy(respuesta, "");
 			strcat(respuesta, "500 Command not recognized");
 			strcat(respuesta, caracteresRetorno);
-			strcat(respuesta,"\0");
+			strcat(respuesta, "\0");
 
 			sleep(3); //Tiempo de trabajo del servidor
-			
+
 			//Enviamos la respuesta al cliente
 			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 				errout(hostname);
@@ -609,21 +656,20 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			{
 				fprintf(stderr, "No se ha podido abrir el fichero");
 			}
-			fputs("\n",p);
+			fputs("\n", p);
 			fputs(respuesta, p);
 			fclose(p);
 
 			memset(mensaje, 0, sizeof mensaje);
 			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta,0,BUFFERSIZE);
-			
-			//printf("MENSAJE: %s\n",mensaje);			
+			memset(respuesta, 0, BUFFERSIZE);
+
+			//printf("MENSAJE: %s\n",mensaje);
 		}
 		//memset(respuesta, 0,sizeof respuesta);
-		memset(envio, 0,sizeof envio);
-		memset(token[0], 0,sizeof token[0]);
-		memset(token[1], 0,sizeof token[1]);
-		
+		memset(envio, 0, sizeof envio);
+		memset(token[0], 0, sizeof token[0]);
+		memset(token[1], 0, sizeof token[1]);
 	}
 	/* The loop has terminated, because there are no
 		 * more requests to be serviced.  As mentioned above,
