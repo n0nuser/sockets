@@ -49,7 +49,6 @@ void handler();
 
 int main(int argc, char *argv[])
 {
-    //\e[93mDEBUG\e[0m
     FILE *f;
 
     /*Informa del uso si los argumentos pasados al programa son erroneos*/
