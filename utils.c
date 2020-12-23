@@ -3,6 +3,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
 #include "utils.h"
 
 #define BUFFERSIZE 1024
@@ -263,6 +265,7 @@ void newsgroup(char *content, char *ficheroGroup, FILE *g, char *date, char *tim
 
 void newnews(char *content, char *ficheroGroup, char *pathArticulos, FILE *g, char *grupo, char *date, char *time)
 {
+    //TODO: Revisar formato fecha 20200718
     char buffer[BUFFERSIZE], tempBuffer[BUFFERSIZE], fecha[BUFFERSIZE] = "", hora[BUFFERSIZE] = "";
     char subject[BUFFERSIZE], messageId[BUFFERSIZE];
     char primero[10], ultimo[10];
@@ -322,14 +325,14 @@ void newnews(char *content, char *ficheroGroup, char *pathArticulos, FILE *g, ch
 
         //Reseteo de las variables
         j = 0;
-        strcpy(subject,"");
-        strcpy(fecha,"");
-        strcpy(hora,"");
-        strcpy(messageId,"");
+        strcpy(subject, "");
+        strcpy(fecha, "");
+        strcpy(hora, "");
+        strcpy(messageId, "");
 
         if (NULL == (g = (fopen(tempGrupo, "r"))))
         {
-            fprintf(stderr,"Error en la apertura del fichero %s\n", tempGrupo);
+            fprintf(stderr, "Error en la apertura del fichero %s\n", tempGrupo);
             exit(2);
         }
         while (fgets(buffer, BUFFERSIZE, g) != NULL)
@@ -412,4 +415,88 @@ void newnews(char *content, char *ficheroGroup, char *pathArticulos, FILE *g, ch
         memset(tempGrupo, 0, BUFFERSIZE);
     }
     strcat(content, ".\n");
+}
+
+int postServidor(char *content, int socket, char *ficheroGroup, char *pathArticulos, FILE *g)
+{
+    char mensajeTotal[BUFFERSIZE * 3];
+    char mensaje[BUFFERSIZE];
+    char tempMensaje[BUFFERSIZE];
+    char buffer[BUFFERSIZE];
+    char grupo[BUFFERSIZE];
+    char pathArticulo[BUFFERSIZE];
+    int len, flagLeido = 1, grupoExiste = 0;
+    char *aux, *s;
+    int numUltimoArticulo = 0;
+    char numUltimoArticuloString[5];
+
+    
+    while (len = recv(socket, mensaje, BUFFERSIZE, 0))
+    {   
+        if (len == -1)
+            printf("Error al recibir en recv - Server.");
+        strcat(mensajeTotal, mensaje);
+        printChars(mensaje);
+        if (strcmp(mensaje, ".") == 0)
+        {
+            break;
+        }
+
+        if (flagLeido) //Una vez lea el newsgroups no lo leera mas
+        {
+            strcpy(tempMensaje, mensaje);
+            aux = strtok(tempMensaje, " ");
+            if (strcmp(aux, "Newsgroups:") == 0)
+            {
+                aux = strtok(NULL, " ");
+                strcat(grupo, aux);
+                strtok(grupo, "\r\n");
+            }
+
+            if (NULL == (g = (fopen(ficheroGroup, "r"))))
+            {
+                fprintf(stderr, "Error en la apertura del fichero %s\n", ficheroGroup);
+                exit(2);
+            }
+
+            while (fgets(buffer, BUFFERSIZE, g) != NULL)
+            {
+                aux = strtok(buffer, " ");
+                printf("Grupo sin cortar: %s", grupo);
+                if (strcmp(aux, grupo) == 0)
+                {
+                    grupoExiste = 1;
+                    aux = strtok(NULL, " ");
+                    s = aux;
+                    while (*s && *s == '0')
+                        s++;
+                    numUltimoArticulo = atoi(s);
+                    printf("Nº ultimo articulo: %d", numUltimoArticulo);
+                    aux = strtok(grupo, ".");
+                    aux = strtok(NULL, " ");
+                    strcpy(grupo, aux);
+                    printf("Grupo cortado: %s", grupo);
+                    strcpy(pathArticulo, pathArticulos);
+                    strtok(pathArticulo, "\r\n");
+                    strcat(pathArticulo, grupo);
+                    strcat(pathArticulo, "/");
+                    sprintf(numUltimoArticuloString, "%d", numUltimoArticulo + 1);
+                    strcat(pathArticulo, numUltimoArticuloString);
+                    break;
+                }
+            }
+            fclose(g);
+            flagLeido = 0;
+        }
+    }
+    if (grupoExiste)
+    {
+        if ((g = fopen(pathArticulo, "w")) == NULL)
+        {
+            printf("File could not be opened %s", pathArticulo);
+        }
+        fprintf(g, "%s", mensajeTotal);
+        fclose(g);
+    }
+    return grupoExiste;
 }
