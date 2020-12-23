@@ -89,16 +89,14 @@ void TCP(FILE *f, int argc, char *argv[])
     struct sockaddr_in servaddr_in; /* for server socket address */
     int addrlen, len, i, j, errcode;
 
-    
-    
     char str[BUFFERSIZE];
     char respuesta[BUFFERSIZE]; //String para la respuesta del servidor
     FILE *c;
-    
+
     char buf[BUFFERSIZE]; /*Contiene lo leido en el fichero linea a linea*/
     char caracteresRetorno[] = "\r\n";
     char salida[BUFFERSIZE / 2];
-    
+    int flagPost = 0;
 
     /* Create the socket. */
     s = socket(AF_INET, SOCK_STREAM, 0);
@@ -179,15 +177,27 @@ void TCP(FILE *f, int argc, char *argv[])
         exit(1);
     }
     // Limpiamos le buffer antes de que empieze a leer
-    strcpy(buf,"");
+    strcpy(buf, "");
     /*Se lee el fichero de ordenes correspondiente, linea a linea*/
     while (fgets(buf, BUFFERSIZE, f) != NULL)
-    {      
-        printf("[C] He recibido: %s\n", respuesta);
-        memset(respuesta, 0, BUFFERSIZE);    
-                                    
+    {
+        if (strcmp(buf, caracteresRetorno) == 0)
+        {
+            continue;
+        }
+        printf("\e[32m%s\e[0m\n", respuesta);
+        memset(respuesta, 0, BUFFERSIZE);
+
+        if (strcmp(buf, "POST\r\n"))
+        {
+            flagPost = 1;
+        }
+        if (flagPost == 1 && strcmp(buf, ".\r\n")){
+            flagPost = 0;
+        }
+
         /********************ENVIO**********************/
-        /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/        
+        /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/
         len = send(s, buf, strlen(buf), 0);
         if (len != strlen(buf))
         {
@@ -196,13 +206,16 @@ void TCP(FILE *f, int argc, char *argv[])
         }
         printf("\e[93mDEBUG [C]\e[0m He enviado: \"");
         printChars(buf);
-        printf("\"\n");
+        printf("\" ");
         printf("\e[93mDEBUG [C]\e[0m Size of buffer: %ld\n", strlen(buf));
-        /********************RECEPCION DE RESPUESTA***********************/
-        if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
+        if (!flagPost)
         {
-            fprintf(stderr, "%s: error reading result\n", argv[0]);
-            exit(1);
+            /********************RECEPCION DE RESPUESTA***********************/
+            if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
+            {
+                fprintf(stderr, "%s: error reading result\n", argv[0]);
+                exit(1);
+            }
         }
     }
     /* Now, shutdown the connection for further sends.

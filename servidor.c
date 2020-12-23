@@ -427,7 +427,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	//strcat(conexionRed,"\0");
 
 	//Prueba de qué tenemos en conexionRed
-	printf("\e[93mDEBUG\e[0m [S] He enviado: %s", conexionRed);
+	//printf("\e[93mDEBUG\e[0m [S] He enviado: %s", conexionRed);
 
 	//Prueba de que tenemos en conexionRed pero en un fichero
 	if (NULL == (p = (fopen(ficheroLog, "a"))))
@@ -455,7 +455,11 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		 */
 	while (len = recv(s, mensaje, BUFFERSIZE, 0))
 	{
-
+		if (len == -1)
+			errout(hostname); /* error from recv */
+		printf("\e[35m%s\e[0m",mensaje);
+		reqcnt++;
+		//strcat(mensaje,"\0");
 		//Vaciamos el vector que contendra cada argumento de la orden
 		for (i = 0; i < 3; i++)
 		{
@@ -474,7 +478,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		}
 
 		//Si no existe algun dato que acompañe a la orden
-		if (!strcmp(token[1], ""))
+		if (strcmp(token[1], "") == 0)
 		{
 			//Quitamos los caracteres finales a la pagina para que no de problemas
 			aux = strtok(token[0], caracteresRetorno);
@@ -491,61 +495,59 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			strcat(envio, token[2]);
 			strcat(envio, " ");
 			strcat(envio, token[3]);
-			//strcat(envio, caracteresRetorno);
 		}
-
-		printf("\e[93mDEBUG # ENVIO\e[0m: \"");
-		printChars(envio);
-		printf("\" ");
-		printf("\e[93mDEBUG # Size of mensaje: \e[0m%ld\n", strlen(envio));
-
-		/*
-        strcat(envio, " ");
-        strcat(envio, token[1]);                  
-        strcat(envio, caracteresRetorno); 
-		*/
-
-		if (len == -1)
-			errout(hostname); /* error from recv */
-		//strcat(mensaje,"\0");
-		printf("[S] He recibido: \"");
-		printChars(mensaje);
-		printf("\"\n");
-		printf("\e[93mDEBUG [S]\e[0m Size of mensaje: %ld\n", strlen(mensaje));
-		reqcnt++;
 
 		//Eliminamos los caracteres de retorno que nos llegan del cliente
 		strtok(mensaje, caracteresRetorno);
 		strtok(envio, caracteresRetorno);
 
+		/*
+		printf("[S] He recibido MENSAJE: \"");
+		printChars(mensaje);
+		printf("\" ");
+		//printf("\e[93mDEBUG [S]\e[0m Size of mensaje: %ld\n", strlen(mensaje));
+
+		printf("[S] He recibido ENVIO: \"");
+		printChars(envio);
+		printf("\" ");
+		//printf("\e[93mDEBUG [S]\e[0m Size of mensaje: %ld\n", strlen(envio));
+
+		printf("[S] He recibido TOKEN[0]: \"");
+		printChars(token[0]);
+		printf("\" ");
+		//printf("\e[93mDEBUG [S]\e[0m Size of TOKEN[0]: %ld\n", strlen(token[0]));
+		*/
 		//COMPROBAR EL TIPO DE CONEXIÓN
-		if (strcmp(envio, "LIST") == 0)
+		if (strcmp(token[0], "LIST") == 0)
 		{
-			//printf("\e[93mDEBUG\e[0m #LIST\n");
+			////printf("\e[93mDEBUG\e[0m #LIST\n");
 			list(respuesta, pathGrupos, g);
 			//sleep(3);
 			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 				errout(hostname);
+			//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 			memset(mensaje, 0, sizeof mensaje);
 			memset(envio, 0, BUFFERSIZE);
 			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(token[0], "NEWGROUPS") == 0)
 		{
-			printf("\n\e[93mDEBUG\e[0m #ORDEN NEWGROUPS\n");
-			newsgroup(respuesta,pathGrupos,g, token[1], token[2]);
+			//printf("\n\e[93mDEBUG\e[0m #ORDEN NEWGROUPS\n");
+			newsgroup(respuesta, pathGrupos, g, token[1], token[2]);
 			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 				errout(hostname);
+			//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 			memset(mensaje, 0, sizeof mensaje);
 			memset(envio, 0, BUFFERSIZE);
 			memset(respuesta, 0, BUFFERSIZE);
 		}
-		else if (strcmp(mensaje, "NEWNEWS") == 0)
+		else if (strcmp(token[0], "NEWNEWS") == 0)
 		{
-			printf("\n\e[93mDEBUG\e[0m #ORDEN NEWNEWS\n");
+			//printf("\n\e[93mDEBUG\e[0m #ORDEN NEWNEWS\n");
 			newnews(respuesta, pathGrupos, pathArticulos, g, token[1], token[2], token[3]);
 			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 				errout(hostname);
+			//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 			memset(mensaje, 0, sizeof mensaje);
 			memset(envio, 0, BUFFERSIZE);
 			memset(respuesta, 0, BUFFERSIZE);
@@ -560,6 +562,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 				strcpy(grupoElegido, token[1]);
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 					errout(hostname);
+				//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 			}
 			else
 			{
@@ -574,6 +577,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 				//Enviamos la respuesta al cliente
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 					errout(hostname);
+				//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 			}
 			memset(mensaje, 0, sizeof mensaje);
 			memset(envio, 0, BUFFERSIZE);
@@ -587,6 +591,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 				{
 					if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 						errout(hostname);
+					//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 				}
 				else
 				{
@@ -601,6 +606,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 					//Enviamos la respuesta al cliente
 					if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 						errout(hostname);
+					//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 				}
 			}
 			else
@@ -616,13 +622,13 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 				//Enviamos la respuesta al cliente
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 					errout(hostname);
-				printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
+				//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 			}
 			memset(mensaje, 0, sizeof mensaje);
 			memset(envio, 0, BUFFERSIZE);
 			memset(respuesta, 0, BUFFERSIZE);
 		}
-		else if (strcmp(mensaje, "HEAD") == 0)
+		else if (strcmp(token[0], "HEAD") == 0)
 		{
 			if (strcmp(grupoElegido, "") != 0)
 			{
@@ -630,6 +636,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 				{
 					if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 						errout(hostname);
+					//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 				}
 				else
 				{
@@ -644,6 +651,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 					//Enviamos la respuesta al cliente
 					if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 						errout(hostname);
+					//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 				}
 			}
 			else
@@ -659,13 +667,13 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 				//Enviamos la respuesta al cliente
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 					errout(hostname);
-				printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
+				//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 			}
 			memset(mensaje, 0, sizeof mensaje);
 			memset(envio, 0, BUFFERSIZE);
 			memset(respuesta, 0, BUFFERSIZE);
 		}
-		else if (strcmp(mensaje, "BODY") == 0)
+		else if (strcmp(token[0], "BODY") == 0)
 		{
 			if (strcmp(grupoElegido, "") != 0)
 			{
@@ -673,6 +681,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 				{
 					if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 						errout(hostname);
+					//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 				}
 				else
 				{
@@ -687,6 +696,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 					//Enviamos la respuesta al cliente
 					if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 						errout(hostname);
+					//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 				}
 			}
 			else
@@ -702,22 +712,36 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 				//Enviamos la respuesta al cliente
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 					errout(hostname);
-				printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
+				//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 			}
 			memset(mensaje, 0, sizeof mensaje);
 			memset(envio, 0, BUFFERSIZE);
 			memset(respuesta, 0, BUFFERSIZE);
 		}
-		else if (strcmp(mensaje, "POST") == 0)
+		else if (strcmp(token[0], "POST") == 0)
 		{
-			printf("\n\e[93mDEBUG\e[0m #ORDEN POST\n");
+			//printf("\n\e[93mDEBUG\e[0m #ORDEN POST\n");
+			if (postServidor(respuesta, s, pathGrupos, pathArticulos, g))
+			{
+				if (send(s, respuesta, strlen(respuesta), 0) != strlen(respuesta))
+					errout(hostname);
+				//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
+			}
+			else
+			{
+				strcpy(respuesta, "441 Posting failed");
+				if (send(s, respuesta, strlen(respuesta), 0) != strlen(respuesta))
+					errout(hostname);
+				//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
+			}
 			memset(mensaje, 0, sizeof mensaje);
 		}
-		else if (strcmp(mensaje, "QUIT") == 0)
+		else if (strcmp(token[0], "QUIT") == 0)
 		{
 			strcpy(respuesta, "\n205 Bye!\n");
 			if (send(s, respuesta, strlen(respuesta), 0) != strlen(respuesta))
 				errout(hostname);
+			//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 			memset(mensaje, 0, sizeof mensaje);
 			break;
 		}
@@ -729,12 +753,12 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			strcat(respuesta, caracteresRetorno);
 			strcat(respuesta, "\0");
 
-			sleep(3); //Tiempo de trabajo del servidor
+			sleep(1); //Tiempo de trabajo del servidor
 
 			//Enviamos la respuesta al cliente
 			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 				errout(hostname);
-			printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
+			//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
 
 			//Introducimos la respuesta al fichero .log
 			if (NULL == (p = (fopen(ficheroLog, "a"))))
