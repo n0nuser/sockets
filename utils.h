@@ -6,4 +6,4 @@ int head(char *content, char *pathArticulos, FILE *a, char * articulo, char * gr
 int body(char *content, char *pathArticulos, FILE *a, char * articulo, char * grupo);
 void newsgroup(char *content, char *ficheroGroup, FILE *g, char *date, char *time);
 void newnews(char *content, char *ficheroGroup, char *pathArticulos, FILE *g, char * grupo, char *date, char *time);
-int postServidor(char *content, int socket, char *ficheroGroup, char *pathArticulos, FILE *g);
+int postServidor(int socket, char *ficheroGroup, char *pathArticulos, FILE *g);

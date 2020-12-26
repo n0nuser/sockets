@@ -188,13 +188,16 @@ void TCP(FILE *f, int argc, char *argv[])
         printf("\e[32m%s\e[0m\n", respuesta);
         memset(respuesta, 0, BUFFERSIZE);
 
-        if (strcmp(buf, "POST\r\n"))
+        if (strcmp(buf, "POST\r\n") == 0)
         {
             flagPost = 1;
         }
-        if (flagPost == 1 && strcmp(buf, ".\r\n")){
+        if (flagPost == 1 && strcmp(buf, ".\r\n") == 0){
             flagPost = 0;
+            printf("VUELVO A RECIBIR\n");
         }
+
+        printf("\e[92mFLAGPOST = %d\e[0m\n",flagPost);
 
         /********************ENVIO**********************/
         /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/
@@ -208,9 +211,11 @@ void TCP(FILE *f, int argc, char *argv[])
         printChars(buf);
         printf("\" ");
         printf("\e[93mDEBUG [C]\e[0m Size of buffer: %ld\n", strlen(buf));
-        if (!flagPost)
+        sleep(1);
+        if (flagPost == 0)
         {
             /********************RECEPCION DE RESPUESTA***********************/
+            printf("[C] ESTOY ESPERANDO UN RECV.\n");
             if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
             {
                 fprintf(stderr, "%s: error reading result\n", argv[0]);

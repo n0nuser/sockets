@@ -457,7 +457,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	{
 		if (len == -1)
 			errout(hostname); /* error from recv */
-		printf("\e[35m%s\e[0m",mensaje);
+		printf("\e[35m[S] %s\e[0m",mensaje);
 		reqcnt++;
 		//strcat(mensaje,"\0");
 		//Vaciamos el vector que contendra cada argumento de la orden
@@ -720,9 +720,11 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		}
 		else if (strcmp(token[0], "POST") == 0)
 		{
-			//printf("\n\e[93mDEBUG\e[0m #ORDEN POST\n");
-			if (postServidor(respuesta, s, pathGrupos, pathArticulos, g))
+			printf("\n\e[93mDEBUG\e[0m #ORDEN POST\n");
+			if (postServidor(s, pathGrupos, pathArticulos, g))
 			{
+				printf("[S] Ya ha terminado la función POST\n");
+				strcpy(respuesta,"240 Article received OK\n");
 				if (send(s, respuesta, strlen(respuesta), 0) != strlen(respuesta))
 					errout(hostname);
 				//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
