@@ -720,10 +720,8 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		}
 		else if (strcmp(token[0], "POST") == 0)
 		{
-			printf("\n\e[93mDEBUG\e[0m #ORDEN POST\n");
 			if (postServidor(s, pathGrupos, pathArticulos, g))
 			{
-				printf("[S] Ya ha terminado la función POST\n");
 				strcpy(respuesta,"240 Article received OK\n");
 				if (send(s, respuesta, strlen(respuesta), 0) != strlen(respuesta))
 					errout(hostname);
@@ -801,13 +799,13 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		 * that this program could easily be ported to a host
 		 * that does require it.
 		 */
-	printf("Completed %s port %u, %d requests, at %s\n", hostname, ntohs(clientaddr_in.sin_port), reqcnt, (char *)ctime(&timevar));
+	printf("\nCompleted %s port %u, %d requests, at %s\n", hostname, ntohs(clientaddr_in.sin_port), reqcnt, (char *)ctime(&timevar));
 }
 
 //This routine aborts the child process attending the client.
 void errout(char *hostname)
 {
-	printf("Connection with %s aborted on error\n", hostname);
+	printf("\nConnection with %s aborted on error\n", hostname);
 	exit(12);
 }
 
