@@ -176,6 +176,8 @@ void TCP(FILE *f, int argc, char *argv[])
         fprintf(stderr, "%s: error reading result\n", argv[0]);
         exit(1);
     }
+    printf("\e[32m%s\e[0m\n", respuesta);
+    memset(respuesta, 0, BUFFERSIZE);
     // Limpiamos le buffer antes de que empieze a leer
     strcpy(buf, "");
     /*Se lee el fichero de ordenes correspondiente, linea a linea*/
@@ -185,17 +187,12 @@ void TCP(FILE *f, int argc, char *argv[])
         {
             continue;
         }
-        if(!flagPost)
-            printf("\e[32m%s\e[0m\n", respuesta);
-        memset(respuesta, 0, BUFFERSIZE);
 
         if (strcmp(buf, "POST\r\n") == 0)
-        {
             flagPost = 1;
-        }
-        if (flagPost == 1 && strcmp(buf, ".\r\n") == 0){
+
+        if (flagPost == 1 && strcmp(buf, ".\r\n") == 0)
             flagPost = 0;
-        }
 
         /********************ENVIO**********************/
         /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/
@@ -220,6 +217,8 @@ void TCP(FILE *f, int argc, char *argv[])
                 fprintf(stderr, "%s: error reading result\n", argv[0]);
                 exit(1);
             }
+            printf("\e[32m%s\e[0m\n", respuesta);
+            memset(respuesta, 0, BUFFERSIZE);
         }
     }
     /* Now, shutdown the connection for further sends.

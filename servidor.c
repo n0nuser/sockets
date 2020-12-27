@@ -375,6 +375,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		 */
 	// Se ha iniciado el servidor
 	printf("[S] Startup from %s port %u at %s", hostname, ntohs(clientaddr_in.sin_port), (char *)ctime(&timevar));
+	sleep(1);
 	/* Set the socket for a lingering, graceful close.
 		 * This will cause a final close of this socket to wait until all of the
 		 * data sent on it has been received by the remote host.
