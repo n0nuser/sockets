@@ -93,7 +93,8 @@ void TCP(FILE *f, int argc, char *argv[])
     char respuesta[BUFFERSIZE]; //String para la respuesta del servidor
     FILE *c;
 
-    char buf[BUFFERSIZE]; /*Contiene lo leido en el fichero linea a linea*/
+    char buf[BUFFERSIZE * 5]; /*Contiene lo leido en el fichero linea a linea*/
+    char tempBuf[BUFFERSIZE * 5];
     char caracteresRetorno[] = "\r\n";
     char salida[BUFFERSIZE / 2];
     int flagPost = 0;
@@ -180,7 +181,7 @@ void TCP(FILE *f, int argc, char *argv[])
     memset(respuesta, 0, BUFFERSIZE);
     // Limpiamos le buffer antes de que empieze a leer
     strcpy(buf, "");
-    /*Se lee el fichero de ordenes correspondiente, linea a linea*/
+    strcpy(tempBuf, "");
     while (fgets(buf, BUFFERSIZE, f) != NULL)
     {
         if (strcmp(buf, caracteresRetorno) == 0)
@@ -191,26 +192,34 @@ void TCP(FILE *f, int argc, char *argv[])
         if (strcmp(buf, "POST\r\n") == 0)
             flagPost = 1;
 
-        if (flagPost == 1 && strcmp(buf, ".\r\n") == 0)
-            flagPost = 0;
+        if (flagPost)
+            strcat(tempBuf,buf);
+            
 
-        /********************ENVIO**********************/
-        /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/
-        len = send(s, buf, strlen(buf), 0);
-        if (len != strlen(buf))
+        if (flagPost == 1 && strcmp(buf, ".\r\n") == 0)
         {
-            fprintf(stderr, "%s%s: Connection aborted on error\nMessage was: %s\nLength returned by send() was: %d%s\n", "\e[25;33m", argv[0], buf, len, normal);
-            exit(1);
+            flagPost = 0;
+            strcpy(buf,tempBuf);
         }
-        /*
-        printf("\e[93mDEBUG [C]\e[0m He enviado: \"");
-        printChars(buf);
-        printf("\" ");
-        printf("\e[93mDEBUG [C]\e[0m Size of buffer: %ld\n", strlen(buf));
-        */
-        sleep(1);
+
         if (flagPost == 0)
         {
+            /********************ENVIO**********************/
+            /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/
+            len = send(s, buf, strlen(buf), 0);
+            if (len != strlen(buf))
+            {
+                fprintf(stderr, "%s%s: Connection aborted on error\nMessage was: %s\nLength returned by send() was: %d%s\n", "\e[25;33m", argv[0], buf, len, normal);
+                exit(1);
+            }
+            strcpy(tempBuf, ""); //Se resetea el buffer de lineas
+            /*
+            printf("\e[93mDEBUG [C]\e[0m He enviado: \"");
+            printChars(buf);
+            printf("\"\e[93mDEBUG [C]\e[0m Size of buffer: %ld\n", strlen(buf));
+            */
+            sleep(1);
+
             /********************RECEPCION DE RESPUESTA***********************/
             if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
             {

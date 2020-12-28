@@ -417,7 +417,7 @@ void newnews(char *content, char *ficheroGroup, char *pathArticulos, FILE *g, ch
     strcat(content, ".\n");
 }
 
-int postServidor(int socket, char *ficheroGroup, char *pathArticulos, FILE *g)
+int postServidor(int socket, char *mensajeOriginal, char *ficheroGroup, char *pathArticulos, FILE *g)
 {
     char mensajeTotal[BUFFERSIZE * 3] = "";
     char mensaje[BUFFERSIZE];
@@ -429,13 +429,22 @@ int postServidor(int socket, char *ficheroGroup, char *pathArticulos, FILE *g)
     char numUltimoArticuloStringCortado[5], numUltimoArticuloString[20];
     int numUltimoArticulo = 0;
     int len, lenArticuloCortado, lenArticulo, flagLeido = 1, grupoExiste = 0;
-    char *aux, *s;
+    char *aux, *lineaActual, *mensajeTemp, *s, *m;
 
-    while (len = recv(socket, mensaje, BUFFERSIZE, 0))
+    //COGE LA LINEA ACTUAL DE UN STRING
+    strcpy(mensaje, mensajeOriginal);
+    lineaActual = strtok_r(mensaje, "\r\n", &mensajeTemp);
+    lineaActual = strtok_r(NULL, "\r\n", &mensajeTemp);
+
+    do
     {
-        if (len == -1)
-            fprintf(stderr,"Error al recibir en recv - Server.\n");
-        strcat(mensajeTotal, mensaje);
+        strcat(lineaActual, "\r\n");
+        printf("LINEA ACTUAL: \"");
+        printChars(lineaActual);
+        printf("\"\n");
+        //strcat(mensajeTotal, lineaActual);
+
+        printf("## DEBUG MENSAJE: %s\n", mensaje);
 
         if (strcmp(mensaje, ".\r\n") == 0)
         {
@@ -444,9 +453,9 @@ int postServidor(int socket, char *ficheroGroup, char *pathArticulos, FILE *g)
 
         if (flagLeido) //Una vez lea el newsgroups no lo leera mas
         {
-            strcpy(tempMensaje, mensaje);
+            strcpy(tempMensaje, lineaActual);
             aux = strtok(tempMensaje, " ");
-            strcpy(grupo,"");
+            strcpy(grupo, "");
             if (strcmp(aux, "Newsgroups:") == 0)
             {
                 aux = strtok(NULL, " ");
@@ -454,85 +463,98 @@ int postServidor(int socket, char *ficheroGroup, char *pathArticulos, FILE *g)
                 strtok(grupo, "\r\n");
                 flagLeido = 0;
             }
-            if (NULL == (g = (fopen(ficheroGroup, "r"))))
+            if (strcmp(grupo, "") != 0)
             {
-                fprintf(stderr, "Error en la apertura del fichero %s\n", ficheroGroup);
-                exit(2);
-            }
-            strcpy(aGuardarFGrupo, "");
-            while (fgets(buffer, BUFFERSIZE, g) != NULL)
-            {
-                strcpy(aGuardarTemp, buffer);
-                aux = strtok(buffer, " ");
-                printf("\e[32mDEBUG - AUX: %s - GRUPO: %s\n",aux, grupo);
-                if (strcmp(aux, grupo) == 0)
+                if (NULL == (g = (fopen(ficheroGroup, "r"))))
                 {
-                    grupoExiste = 1;
-                    aux = strtok(NULL, " ");
-                    lenArticulo = strlen(aux);
-                    s = aux;
-                    while (*s && *s == '0')
-                        s++;
-
-                    lenArticuloCortado = strlen(s);
-                    numUltimoArticulo = atoi(s);
-                    numUltimoArticulo++;
-                    //Añadir tantos 0's como la diferencia entre lenArticulo y lenArticuloCortado
-                    strcpy(numUltimoArticuloString, "0");
-                    for (int i = 0; i < (lenArticulo - lenArticuloCortado) - 1; i++)
+                    fprintf(stderr, "Error en la apertura del fichero %s\n", ficheroGroup);
+                    exit(2);
+                }
+                strcpy(aGuardarFGrupo, "");
+                while (fgets(buffer, BUFFERSIZE, g) != NULL)
+                {
+                    strcpy(aGuardarTemp, buffer);
+                    aux = strtok(buffer, " ");
+                    printf("\e[32mDEBUG - AUX: %s - GRUPO: %s\n", aux, grupo);
+                    if (strcmp(aux, grupo) == 0)
                     {
-                        sprintf(numUltimoArticuloString, "0%s", numUltimoArticuloString);
-                    }
-                    sprintf(numUltimoArticuloString, "%s%d", numUltimoArticuloString, numUltimoArticulo);
-                    strcpy(aGuardarFGrupoLineaMod, grupo);
-                    strcat(aGuardarFGrupoLineaMod, " ");
-                    strcat(aGuardarFGrupoLineaMod, numUltimoArticuloString);
-                    while (aux != NULL)
-                    {
+                        grupoExiste = 1;
                         aux = strtok(NULL, " ");
-                        if (aux != NULL)
+                        lenArticulo = strlen(aux);
+                        s = aux;
+                        while (*s && *s == '0')
+                            s++;
+
+                        lenArticuloCortado = strlen(s);
+                        numUltimoArticulo = atoi(s);
+                        numUltimoArticulo++;
+                        //Añadir tantos 0's como la diferencia entre lenArticulo y lenArticuloCortado
+                        strcpy(numUltimoArticuloString, "0");
+                        for (int i = 0; i < (lenArticulo - lenArticuloCortado) - 1; i++)
                         {
-                            strcat(aGuardarFGrupoLineaMod, " ");
-                            strcat(aGuardarFGrupoLineaMod, aux);
+                            sprintf(numUltimoArticuloString, "0%s", numUltimoArticuloString);
                         }
+                        sprintf(numUltimoArticuloString, "%s%d", numUltimoArticuloString, numUltimoArticulo);
+                        strcpy(aGuardarFGrupoLineaMod, grupo);
+                        strcat(aGuardarFGrupoLineaMod, " ");
+                        strcat(aGuardarFGrupoLineaMod, numUltimoArticuloString);
+                        while (aux != NULL)
+                        {
+                            aux = strtok(NULL, " ");
+                            if (aux != NULL)
+                            {
+                                strcat(aGuardarFGrupoLineaMod, " ");
+                                strcat(aGuardarFGrupoLineaMod, aux);
+                            }
+                        }
+                        strcpy(grupoConcreto, grupo); //Así por un lado local.redes y por otro redes
+                        aux = strtok(grupoConcreto, ".");
+                        aux = strtok(NULL, " ");
+                        strcpy(grupoConcreto, aux);
+                        strcpy(pathArticulo, pathArticulos);
+                        strtok(pathArticulo, "\r\n");
+                        strcat(pathArticulo, grupoConcreto);
+                        strcat(pathArticulo, "/");
+                        sprintf(numUltimoArticuloStringCortado, "%d", numUltimoArticulo);
+                        strcat(pathArticulo, numUltimoArticuloStringCortado);
+                        strcat(aGuardarFGrupo, aGuardarFGrupoLineaMod);
                     }
-                    strcpy(grupoConcreto, grupo); //Así por un lado local.redes y por otro redes
-                    aux = strtok(grupoConcreto, ".");
-                    aux = strtok(NULL, " ");
-                    strcpy(grupoConcreto, aux);
-                    strcpy(pathArticulo, pathArticulos);
-                    strtok(pathArticulo, "\r\n");
-                    strcat(pathArticulo, grupoConcreto);
-                    strcat(pathArticulo, "/");
-                    sprintf(numUltimoArticuloStringCortado, "%d", numUltimoArticulo);
-                    strcat(pathArticulo, numUltimoArticuloStringCortado);
-                    strcat(aGuardarFGrupo, aGuardarFGrupoLineaMod);
+                    else
+                    {
+                        strcat(aGuardarFGrupo, aGuardarTemp);
+                    }
                 }
-                else
-                {
-                    strcat(aGuardarFGrupo, aGuardarTemp);
-                }
+                fclose(g);
             }
-            fclose(g);
         }
-        memset(mensaje, 0, sizeof mensaje);
+        memset(lineaActual, 0, sizeof lineaActual);
         memset(tempMensaje, 0, sizeof tempMensaje);
         memset(grupo, 0, sizeof grupo);
-    }
+
+    } while ((lineaActual = strtok_r(NULL, "\r\n", &mensajeTemp)) != NULL);
+
     if (grupoExiste)
     {
-        printf("\e[37mDEBUG: GRUPO SI EXISTE\n");
         if ((g = fopen(ficheroGroup, "w")) == NULL)
         {
-            fprintf(stderr,"File could not be opened %s", ficheroGroup);
+            fprintf(stderr, "File could not be opened %s", ficheroGroup);
         }
 
         fprintf(g, "%s", aGuardarFGrupo);
         fclose(g);
 
+        //QUITA TODAS LAS LINEAS HASTA QUE ENCUENTRA
+        // LA N MAYUSCULA DE NEWSGROUP
+        m = mensajeOriginal;
+        while (*m && *m != '\n')
+            m++;
+        m++;
+        strcpy(mensajeTotal, m);
+        ////////////////////////////////////////////
+
         if ((g = fopen(pathArticulo, "w")) == NULL)
         {
-            fprintf(stderr,"File could not be opened %s", pathArticulo);
+            fprintf(stderr, "File could not be opened %s", pathArticulo);
         }
         fprintf(g, "%s", mensajeTotal);
         fclose(g);
