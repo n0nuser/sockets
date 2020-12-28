@@ -36,6 +36,7 @@
 #define ADDRNOTFOUND 0xffffffff /* return address for unfound host */
 #define BUFFERSIZE 1024			/* maximum size of packets to be received */
 #define MAXHOST 128
+#define TIMEOUT 6 //Timeout para la señal de alarma
 
 extern int errno;
 
@@ -52,6 +53,7 @@ extern int errno;
 void serverTCP(int s, struct sockaddr_in peeraddr_in);
 void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in);
 void errout(char *); /* declare error out routine */
+void handler();
 
 int FIN = 0; /* Para el cierre ordenado */
 void finalizar() { FIN = 1; }
@@ -316,12 +318,12 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 {
 	//TODO - Cambiar variable BUFFERSIZE por una más acorde a cada caso
 	int reqcnt = 0;				   /* keeps count of number of requests */
-	char mensaje[BUFFERSIZE] = ""; /* This example uses BUFFERSIZE byte messages. */
+	char mensaje[BUFFERSIZE*5] = ""; /* This example uses BUFFERSIZE byte messages. */
+	char mensajeOriginal[BUFFERSIZE*5] = ""; /* This example uses BUFFERSIZE byte messages. */
 	char hostname[MAXHOST];		   /* remote host's name string */
 
 	int len, len1, status;
-	struct hostent *hp; /* pointer to host info for remote host */
-	long timevar;		/* contains time returned by time() */
+	long timevar; /* contains time returned by time() */
 
 	struct linger linger; /* allow a lingering, graceful close; */
 						  /* used when setting SO_LINGER */
@@ -343,6 +345,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 
 	char *aux;
 	char token[3][100];
+	char tokenTemp[BUFFERSIZE];
 	char envio[BUFFERSIZE]; //String para el envio al servidor
 	int q = 0, i = 0;
 
@@ -454,11 +457,14 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		 * how the server will know that no more requests will
 		 * follow, and the loop will be exited.
 		 */
-	while (len = recv(s, mensaje, BUFFERSIZE, 0))
+	while (len = recv(s, mensaje, BUFFERSIZE*5, 0))
 	{
 		if (len == -1)
 			errout(hostname); /* error from recv */
-		printf("\e[35m[S] %s\e[0m",mensaje);
+		
+		//printf("\e[35m[S] He recibido: \"%s\"\e[0m\n", mensaje);
+
+		strcpy(mensajeOriginal,mensaje);
 		reqcnt++;
 		//strcat(mensaje,"\0");
 		//Vaciamos el vector que contendra cada argumento de la orden
@@ -467,6 +473,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			strcpy(token[i], "");
 		}
 		q = 0;
+
 		//Separamos la linea leida en tokens delimitados por espacios
 		aux = strtok(mensaje, " ");
 
@@ -502,22 +509,14 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		strtok(mensaje, caracteresRetorno);
 		strtok(envio, caracteresRetorno);
 
-		/*
-		printf("[S] He recibido MENSAJE: \"");
-		printChars(mensaje);
-		printf("\" ");
-		//printf("\e[93mDEBUG [S]\e[0m Size of mensaje: %ld\n", strlen(mensaje));
+		strcpy(tokenTemp,token[0]);
+		aux = strtok(tokenTemp,caracteresRetorno);
+		if(aux != NULL)
+			strcpy(tokenTemp,aux);
 
-		printf("[S] He recibido ENVIO: \"");
-		printChars(envio);
-		printf("\" ");
-		//printf("\e[93mDEBUG [S]\e[0m Size of mensaje: %ld\n", strlen(envio));
+		//printf("\e[35m[S] TOKEN[0]: \"%s\"\e[0m\n", token[0]);
+		//printf("\e[35m[S] TOKENTEMP: \"%s\"\e[0m\n", tokenTemp);
 
-		printf("[S] He recibido TOKEN[0]: \"");
-		printChars(token[0]);
-		printf("\" ");
-		//printf("\e[93mDEBUG [S]\e[0m Size of TOKEN[0]: %ld\n", strlen(token[0]));
-		*/
 		//COMPROBAR EL TIPO DE CONEXIÓN
 		if (strcmp(token[0], "LIST") == 0)
 		{
@@ -719,11 +718,11 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			memset(envio, 0, BUFFERSIZE);
 			memset(respuesta, 0, BUFFERSIZE);
 		}
-		else if (strcmp(token[0], "POST") == 0)
+		else if (strcmp(tokenTemp, "POST") == 0)
 		{
-			if (postServidor(s, pathGrupos, pathArticulos, g))
+			if (postServidor(s, mensajeOriginal, pathGrupos, pathArticulos, g))
 			{
-				strcpy(respuesta,"240 Article received OK\n");
+				strcpy(respuesta, "240 Article received OK\n");
 				if (send(s, respuesta, strlen(respuesta), 0) != strlen(respuesta))
 					errout(hostname);
 				//printf("\e[93mDEBUG\e[0m [S] He enviado: %s\n", respuesta);
@@ -822,39 +821,139 @@ void errout(char *hostname)
  */
 void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 {
-	struct in_addr reqaddr; /* for requested host's address */
-	struct hostent *hp;		/* pointer to host info for requested host */
+	int reqcnt = 0;				   /* keeps count of number of requests */
+	char mensaje[BUFFERSIZE] = ""; /* This example uses BUFFERSIZE byte messages. */
+	char hostname[MAXHOST];		   /* remote host's name string */
 	int nc, errcode;
+	long timevar; /* contains time returned by time() */
 
-	struct addrinfo hints, *res;
+	int len, len1, status;
+	
+
+	struct sigaction alarma;
+	struct addrinfo hints;
+	struct dirent *dt;		//Estructura donde estará la información sobre el archivo que se esta "sacando" en cada momento
+	struct linger linger; 	//Allow a lingering, graceful close; Used when setting SO_LINGER
+	struct in_addr reqaddr; //For requested host's address
+						  
+
+	//VARIABLES PARA NNTP
+	char conexionRed[BUFFERSIZE] = "";
+	char caracteresRetorno[] = "\r\n";
+	FILE *p, *g, *a; //Puntero al archivo del registro
+
+	char respuesta[BUFFERSIZE]; //Envio de respuesta al cliente
+	char temp[BUFFERSIZE];		//Cadena auxiliar
+	char temp2[50];
+	char grupoElegido[BUFFERSIZE] = "";
+
+	//VARIABLES FICHEROS
+	char pathGrupos[] = "nntp/noticias/grupos";				 //Nombre del archivo group, para LIST
+	char pathArticulos[] = "nntp/noticias/articulos/local/"; //Nombre del archivo group, para LIST
+	char ficheroLog[] = "nntpd.log";						 //Nombre del archivo de peticiones
+
+	char *aux;
+	char token[3][100];
+	char envio[BUFFERSIZE]; //String para el envio al servidor
+	int q = 0, i = 0;
 
 	int addrlen;
+	int socketON = 1; //Flag que contola el estado del socket(abierto:true/cerrado:false)
+
+	strcpy(mensaje,buffer);
 
 	addrlen = sizeof(struct sockaddr_in);
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
-	/* Treat the message as a string containing a hostname. */
 
-	if (errcode != 0)
-	{
-		/* Name was not found.  Return a
-		 * special value signifying the error. */
-		reqaddr.s_addr = ADDRNOTFOUND;
-	}
-	else
-	{
-		/* Copy address of host into the return buffer. */
-		reqaddr = ((struct sockaddr_in *)res->ai_addr)->sin_addr;
-	}
-	freeaddrinfo(res);
+	time(&timevar);
 
-	nc = sendto(s, &reqaddr, sizeof(struct in_addr),
-				0, (struct sockaddr *)&clientaddr_in, addrlen);
-	if (nc == -1)
+	printf("Startup port %u at %s", ntohs(clientaddr_in.sin_port), (char *)ctime(&timevar));
+
+	linger.l_onoff = 1;
+	linger.l_linger = 1;
+
+	if (setsockopt(s, SOL_SOCKET, SO_LINGER, &linger, sizeof(linger)) == -1)
 	{
-		perror("serverUDP");
-		printf("%s: sendto error\n", "serverUDP");
-		return;
+		errout(hostname);
 	}
+
+	/* Registrar SIGALRM para no quedar bloqueados en los recvfrom */
+	alarma.sa_handler = (void *)handler;
+	alarma.sa_flags = 0;
+	if (sigaction(SIGALRM, &alarma, (struct sigaction *)0) == -1)
+	{
+		perror(" sigaction(SIGALRM)");
+		fprintf(stderr, "Unable to register the SIGALRM signal\n");
+		exit(1);
+	}
+
+	/*Registramos el establecimiento de conexion en el fichero nntp.log*/
+	/*Limpiamos la cadena*/
+	strcpy(temp, "");
+	strcpy(temp2, "");
+
+	strcat(temp, " ");
+	strcat(temp, ctime(&timevar)); //Metemos la fecha y hora
+
+	strcat(temp, " [C] ");
+	strcat(temp, hostname);
+	strcat(temp, " ");
+	strcat(temp, inet_ntoa(clientaddr_in.sin_addr)); //Metemos la IP
+
+	strcat(temp, " ");
+	strcat(temp, "UDP"); //Metemos protocolo de transporte
+
+	strcat(temp, " ");
+	snprintf(temp2, sizeof(temp2), "%d", clientaddr_in.sin_port); //Este es el puerto efímero
+	strcat(temp, temp2);
+	strcat(temp, "\n"); //Metemos puerto efimero
+	//Se guarda la información en el fichero
+	/*Metemos en el archivo peticiones.log lo recibido*/
+	if (NULL == (p = (fopen(ficheroLog, "a"))))
+	{
+
+		fprintf(stderr, "No se ha podido abrir el fichero");
+	}
+	fputs(temp, p); //Ponemos en el fichero la cabecera
+	fclose(p);	   //Cerramos el fichero
+
+	do
+	{
+		socketON = 1;
+		/*TRATAMIENTO DEL MENSAJE*/
+		
+		if (socketON)
+		{
+			/*Recibir y volver a enviar*/
+			alarm(TIMEOUT);
+			memset(buffer, 0, sizeof(buffer));
+			memset(mensaje, 0, sizeof(mensaje));
+			if (recvfrom(s, mensaje, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, &addrlen) == -1)
+			{
+				if (errno == EINTR)
+					break;
+				else
+				{
+					printf("Unable to get response from");
+					exit(1);
+				}
+			}
+		}
+		else
+			break;
+	} while (1);
+
+	time(&timevar);
+	printf("Completed port %u, %d requests, at %s\n", ntohs(clientaddr_in.sin_port), reqcnt, (char *)ctime(&timevar));
+	close(s);
+}
+
+
+/*Señal para la señal de alarma*/
+void handler(){
+
+        printf("No hay mas mensajes que recibir\n");
+
 }
