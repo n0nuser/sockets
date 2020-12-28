@@ -446,6 +446,7 @@ int postServidor(int socket, char *ficheroGroup, char *pathArticulos, FILE *g)
         {
             strcpy(tempMensaje, mensaje);
             aux = strtok(tempMensaje, " ");
+            strcpy(grupo,"");
             if (strcmp(aux, "Newsgroups:") == 0)
             {
                 aux = strtok(NULL, " ");
@@ -463,6 +464,7 @@ int postServidor(int socket, char *ficheroGroup, char *pathArticulos, FILE *g)
             {
                 strcpy(aGuardarTemp, buffer);
                 aux = strtok(buffer, " ");
+                printf("\e[32mDEBUG - AUX: %s - GRUPO: %s\n",aux, grupo);
                 if (strcmp(aux, grupo) == 0)
                 {
                     grupoExiste = 1;
@@ -519,6 +521,7 @@ int postServidor(int socket, char *ficheroGroup, char *pathArticulos, FILE *g)
     }
     if (grupoExiste)
     {
+        printf("\e[37mDEBUG: GRUPO SI EXISTE\n");
         if ((g = fopen(ficheroGroup, "w")) == NULL)
         {
             fprintf(stderr,"File could not be opened %s", ficheroGroup);
