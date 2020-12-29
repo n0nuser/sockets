@@ -1,3 +1,4 @@
+./killPS
 make clean
 make
 ./lanzaServidor.sh

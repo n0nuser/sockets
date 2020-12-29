@@ -96,7 +96,6 @@ void TCP(FILE *f, int argc, char *argv[])
     char buf[BUFFERSIZE * 5]; /*Contiene lo leido en el fichero linea a linea*/
     char tempBuf[BUFFERSIZE * 5];
     char caracteresRetorno[] = "\r\n";
-    char salida[BUFFERSIZE / 2];
     int flagPost = 0;
 
     /* Create the socket. */
@@ -193,13 +192,12 @@ void TCP(FILE *f, int argc, char *argv[])
             flagPost = 1;
 
         if (flagPost)
-            strcat(tempBuf,buf);
-            
+            strcat(tempBuf, buf);
 
         if (flagPost == 1 && strcmp(buf, ".\r\n") == 0)
         {
             flagPost = 0;
-            strcpy(buf,tempBuf);
+            strcpy(buf, tempBuf);
         }
 
         if (flagPost == 0)
@@ -265,15 +263,16 @@ void UDP(FILE *f, int argc, char *argv[])
 
     char envio[BUFFERSIZE];     //String para el envio al servidor
     char respuesta[BUFFERSIZE]; //String para la respuesta del servidor
-    char buf[BUFFERSIZE];       /*Contiene lo leido en el fichero linea a linea*/
+    char buf[BUFFERSIZE * 5];   /*Contiene lo leido en el fichero linea a linea*/
     char conexionRed[] = "NNTP";
     char caracteresRetorno[] = "\r\n";
     char *str, *corta; //Puntero que apuntará a cada parte de la linea para separar
     char vect[3][100];
-    char salida[BUFFERSIZE / 2];
     int q = 0, p = 0;
     FILE *c;
     char aux[7];
+    char tempBuf[BUFFERSIZE * 5];
+    int flagPost = 0;
 
     /* Create the socket. */
     s = socket(AF_INET, SOCK_DGRAM, 0);
@@ -358,65 +357,67 @@ void UDP(FILE *f, int argc, char *argv[])
     }
 
     /*Se lee el fichero de ordenes correspondiente, linea a linea*/
+    strcpy(buf, "");
+    strcpy(tempBuf, "");
     while (fgets(buf, BUFFERSIZE, f) != NULL)
     {
-
-        /*FINAL: caracteres finales del protocolo*/
-        strcat(envio, caracteresRetorno);
-
         /********************ENVIO**********************/
         n_retry = RETRIES;
 
-        while (n_retry > 0)
+        if (strcmp(buf, caracteresRetorno) == 0)
         {
-            /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/
-            if (sendto(s, envio, strlen(envio), 0, (struct sockaddr *)&servaddr_in, sizeof(struct sockaddr_in)) != strlen(envio))
-            {
-                perror(argv[0]);
-                fprintf(stderr, "%s: unable to send request\n", argv[0]);
-                exit(1);
-            }
-            /*Establecemos una alarma para que el recvfrom no se quede en espera infinita por ser bloqueante*/
-            alarm(TIMEOUT);
+            continue;
+        }
 
-            /*******************RECEPCION DE RESPUESTA******************/
-            if ((len = recvfrom(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&servaddr_in, &addrlen)) == -1)
+        if (strcmp(buf, "POST\r\n") == 0)
+            flagPost = 1;
+
+        if (flagPost)
+            strcat(tempBuf, buf);
+
+        if (flagPost == 1 && strcmp(buf, ".\r\n") == 0)
+        {
+            flagPost = 0;
+            strcpy(buf, tempBuf);
+        }
+
+        if (flagPost == 0)
+        {
+            while (n_retry > 0)
             {
-                if (errno == EINTR)
+
+                /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/
+                if (sendto(s, buf, strlen(buf), 0, (struct sockaddr *)&servaddr_in, sizeof(struct sockaddr_in)) != strlen(buf))
                 {
-                    /*Si salta la alarma quitamos un intento*/
-                    printf("attempt %d (retries %d).\n", n_retry, RETRIES);
-                    n_retry--;
+                    perror(argv[0]);
+                    fprintf(stderr, "%s: unable to send request\n", argv[0]);
+                }
+                strcpy(tempBuf, "");
+                /*Establecemos una alarma para que el recvfrom no se quede en espera infinita por ser bloqueante*/
+                alarm(TIMEOUT);
+
+                /*******************RECEPCION DE RESPUESTA******************/
+                if ((len = recvfrom(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&servaddr_in, &addrlen)) == -1)
+                {
+                    if (errno == EINTR)
+                    {
+                        /*Si salta la alarma quitamos un intento*/
+                        printf("attempt %d (retries %d).\n", n_retry, RETRIES);
+                        n_retry--;
+                    }
+                    else
+                    {
+                        printf("Unable to get response from");
+                        exit(1);
+                    }
                 }
                 else
                 {
-                    printf("Unable to get response from");
-                    exit(1);
+                    alarm(0); //Cancelamos la alarma
+                    /*Sacamos la salida*/
+                    printf("\e[32m%s\e[0m");
+                    break; //Salimos del bucle de los intentos
                 }
-            }
-            else
-            {
-                alarm(0); //Cancelamos la alarma
-                /*Sacamos la salida*/
-                corta = strtok(respuesta, caracteresRetorno);
-                while (corta != NULL)
-                {
-                    /*Copiamos la cadena que salga sobreescribiendo la que haya para quedarnos con la ultima*/
-                    strcpy(salida, corta);
-                    /*Seguimos con el siguiente token*/
-                    corta = strtok(NULL, caracteresRetorno);
-                }
-                strcat(salida, caracteresRetorno);
-                /*Convertimos a string el puerto efimero*/
-                snprintf(aux, sizeof(aux), "%d", myaddr_in.sin_port);
-                strcat(aux, ".txt");
-                if (NULL == (c = (fopen(aux, "a"))))
-                {
-                    fprintf(stderr, "No se ha podido abrir el fichero");
-                }
-                fputs(salida, c); //Ponemos en el fichero la cabecera
-                fclose(c);        //Cerramos el fichero
-                break;            //Salimos del bucle de los intentos
             }
         }
         /*Se imprime el error de los intentos*/
@@ -431,6 +432,5 @@ void UDP(FILE *f, int argc, char *argv[])
 /*Señal para la señal de alarma*/
 void handler()
 {
-
     printf("La recepcion ha superado el timeout: %d\n", TIMEOUT);
 }
