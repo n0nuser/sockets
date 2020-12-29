@@ -89,7 +89,7 @@ int group(char *content, char *ficheroGroup, FILE *g, char *grupo)
             strcat(content, ultimo);
             strcat(content, " ");
             strcat(content, grupo);
-
+            strcat(content, "\r\n");
             return 1;
         }
     }
@@ -104,7 +104,6 @@ int article(char *content, char *pathArticulos, FILE *a, char *articulo, char *g
     aux = strtok(tempGrupo, ".");
     aux = strtok(NULL, " ");
     strcpy(tempGrupo, aux);
-    printf("\e[93mGRUPO %s\e[0m\n", tempGrupo);
 
     strcpy(pathGrupo, pathArticulos);
     strcat(pathGrupo, tempGrupo);
@@ -444,12 +443,8 @@ int postServidor(int socket, char *mensajeOriginal, char *ficheroGroup, char *pa
         printf("\"\n");
         //strcat(mensajeTotal, lineaActual);
 
-        printf("## DEBUG MENSAJE: %s\n", mensaje);
-
-        if (strcmp(mensaje, ".\r\n") == 0)
-        {
+        if (strcmp(lineaActual, ".\r\n") == 0)
             break;
-        }
 
         if (flagLeido) //Una vez lea el newsgroups no lo leera mas
         {
@@ -478,6 +473,7 @@ int postServidor(int socket, char *mensajeOriginal, char *ficheroGroup, char *pa
                     printf("\e[32mDEBUG - AUX: %s - GRUPO: %s\n", aux, grupo);
                     if (strcmp(aux, grupo) == 0)
                     {
+                        printf("\e[32mDEBUG STRCMP : GRUPO SI EXISTE\e[0m\n");
                         grupoExiste = 1;
                         aux = strtok(NULL, " ");
                         lenArticulo = strlen(aux);
@@ -520,9 +516,7 @@ int postServidor(int socket, char *mensajeOriginal, char *ficheroGroup, char *pa
                         strcat(aGuardarFGrupo, aGuardarFGrupoLineaMod);
                     }
                     else
-                    {
                         strcat(aGuardarFGrupo, aGuardarTemp);
-                    }
                 }
                 fclose(g);
             }
@@ -536,9 +530,7 @@ int postServidor(int socket, char *mensajeOriginal, char *ficheroGroup, char *pa
     if (grupoExiste)
     {
         if ((g = fopen(ficheroGroup, "w")) == NULL)
-        {
             fprintf(stderr, "File could not be opened %s", ficheroGroup);
-        }
 
         fprintf(g, "%s", aGuardarFGrupo);
         fclose(g);
