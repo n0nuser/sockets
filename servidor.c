@@ -344,7 +344,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	char ficheroLog[] = "nntpd.log";						 //Nombre del archivo de peticiones
 
 	char *aux;
-	char token[3][BUFFERSIZE];
+	char token[3][100]; //NO TOCAR EL 100 O DA ERROR	
 	char tokenTemp[BUFFERSIZE];
 	char envio[BUFFERSIZE]; //String para el envio al servidor
 	int q = 0, i = 0;
@@ -510,6 +510,8 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		aux = strtok(tokenTemp, caracteresRetorno);
 		if (aux != NULL)
 			strcpy(tokenTemp, aux);
+
+		//TODO : registrar las peticiones en el nttpd.log
 
 		//COMPROBAR EL TIPO DE CONEXIÓN
 		if (strcmp(token[0], "LIST") == 0)
@@ -703,7 +705,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		}
 		else if (strcmp(tokenTemp, "POST") == 0)
 		{
-			if (postServidor(s, mensajeOriginal, pathGrupos, pathArticulos, g))
+			if (post(s, mensajeOriginal, pathGrupos, pathArticulos, g))
 			{
 				strcpy(respuesta, "240 Article received OK\n");
 				if (send(s, respuesta, strlen(respuesta), 0) != strlen(respuesta))
@@ -841,9 +843,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 	strcpy(mensaje, buffer);
 	strcpy(mensajeOriginal, mensaje);
 
-	printf("\e[35m RECV UDP: \"");
-	printChars(mensaje);
-	printf("\"\e[0m\n");
+	printf("\e[35m%s\e[0m\n",mensaje);
 
 	addrlen = sizeof(struct sockaddr_in);
 
@@ -951,6 +951,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 		if (aux != NULL)
 			strcpy(tokenTemp, aux);
 			
+		printf("\e[35m%s\e[0m\n",envio);
 		//COMPROBAR EL TIPO DE CONEXIÓN
 		if (strcmp(token[0], "LIST") == 0)
 		{
@@ -1140,7 +1141,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 		}
 		else if (strcmp(tokenTemp, "POST") == 0)
 		{
-			if (postServidor(s, mensajeOriginal, pathGrupos, pathArticulos, g))
+			if (post(s, mensajeOriginal, pathGrupos, pathArticulos, g))
 			{
 				strcpy(respuesta, "240 Article received OK\n");
 				if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
@@ -1225,6 +1226,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 	time(&timevar);
 	printf("Completed port %u, %d requests, at %s\n", ntohs(clientaddr_in.sin_port), reqcnt, (char *)ctime(&timevar));
 	close(s);
+	return;
 }
 
 /*Señal para la señal de alarma*/
