@@ -416,7 +416,7 @@ void newnews(char *content, char *ficheroGroup, char *pathArticulos, FILE *g, ch
     strcat(content, ".\n");
 }
 
-int postServidor(int socket, char *mensajeOriginal, char *ficheroGroup, char *pathArticulos, FILE *g)
+int post(int socket, char *mensajeOriginal, char *ficheroGroup, char *pathArticulos, FILE *g)
 {
     char mensajeTotal[BUFFERSIZE * 3] = "";
     char mensaje[BUFFERSIZE];
@@ -438,7 +438,6 @@ int postServidor(int socket, char *mensajeOriginal, char *ficheroGroup, char *pa
     do
     {
         strcat(lineaActual, "\r\n");
-        printf("LINEA ACTUAL: \"");
         printChars(lineaActual);
         printf("\"\n");
         //strcat(mensajeTotal, lineaActual);
@@ -470,10 +469,8 @@ int postServidor(int socket, char *mensajeOriginal, char *ficheroGroup, char *pa
                 {
                     strcpy(aGuardarTemp, buffer);
                     aux = strtok(buffer, " ");
-                    printf("\e[32mDEBUG - AUX: %s - GRUPO: %s\n", aux, grupo);
                     if (strcmp(aux, grupo) == 0)
                     {
-                        printf("\e[32mDEBUG STRCMP : GRUPO SI EXISTE\e[0m\n");
                         grupoExiste = 1;
                         aux = strtok(NULL, " ");
                         lenArticulo = strlen(aux);

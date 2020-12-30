@@ -427,6 +427,11 @@ void UDP(FILE *f, int argc, char *argv[])
             printf(" %s after %d attempts.\n", argv[1], RETRIES);
         }
     }
+    
+    /* Print message indicating completion of task. */
+    time(&timevar);
+    printf("All done at %s", (char *)ctime(&timevar));
+    return;
 }
 
 /*Señal para la señal de alarma*/
