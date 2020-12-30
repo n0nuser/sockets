@@ -1,3 +1,4 @@
+#!/bin/bash
 msg="Uploading files $(date)"
 make clean
 git add *
