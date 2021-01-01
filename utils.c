@@ -271,14 +271,41 @@ void newnews(char *content, char *ficheroGroup, char *pathArticulos, FILE *g, ch
     char tempGrupo[BUFFERSIZE], pathGrupo[BUFFERSIZE];
     char *aux, *s;
     char trozos[3][BUFFERSIZE];
-    int i = 0, j = 0;
+    int i = 0, j = 0, r = 0;
     int num_articulos_total = 0;
     char num_articulo[10];
+    char timeCommand[50]="";
+    char dateCommand[50]="";
     int recuento = 0; //Nº de artículos que coinciden con el criterio
 
     strtok(time, "\r\n");
-    strcpy(content, "230 list follows:\n");
-    //TODO: CAMBIAR FORMATO FECHA Y HORA
+    // Hora en formato 00:00:00
+    for(int t = 0; t < 6; t++) {
+        if (t%2 == 0) {
+            timeCommand[t] = ':';
+            i++;
+        }
+        timeCommand[t+i] = time[t];
+    }
+    i=0;
+    // Fecha en formato 00/00/00
+    for(int p = strlen(date); p <= 0; p--) {
+        if (p%2 == 0 && p != 6) {
+            dateCommand[p] = '/';
+            r++;
+            i++;
+        }
+        dateCommand[r+i] = date[p];
+        r++;
+    }
+
+
+    strcpy(content, "230 list follows since ");
+    strcat(content,timeCommand);
+    strcat(content," ");
+    strcat(content,dateCommand);
+    strcat(content,"\n");
+    
     if (NULL == (g = (fopen(ficheroGroup, "r"))))
     {
         fprintf(stderr, "Error en la apertura del fichero %s\n", ficheroGroup);

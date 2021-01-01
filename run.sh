@@ -1,5 +1,5 @@
 #!/bin/bash
-./killPS
+./killPS.sh
 make clean
 make
 ./lanzaServidor.sh
