@@ -316,7 +316,6 @@ char *argv[];
 
 void serverTCP(int s, struct sockaddr_in clientaddr_in)
 {
-	//TODO - Cambiar variable BUFFERSIZE por una más acorde a cada caso
 	int reqcnt = 0;							   /* keeps count of number of requests */
 	char mensaje[BUFFERSIZE * 5] = "";		   /* This example uses BUFFERSIZE byte messages. */
 	char mensajeOriginal[BUFFERSIZE * 5] = ""; /* This example uses BUFFERSIZE byte messages. */
@@ -344,10 +343,12 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	char ficheroLog[] = "nntpd.log";						 //Nombre del archivo de peticiones
 
 	char *aux;
-	char token[3][100]; //NO TOCAR EL 100 O DA ERROR	
+	char token[3][100]; //NO TOCAR EL 100 O DA ERROR
 	char tokenTemp[BUFFERSIZE];
 	char envio[BUFFERSIZE]; //String para el envio al servidor
+	char temporal[BUFFERSIZE]="";
 	int q = 0, i = 0;
+	time_t fechaHora;
 
 	/* Look up the host information for the remote host
 	 * that we have connected with.  Its internet address
@@ -511,7 +512,19 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		if (aux != NULL)
 			strcpy(tokenTemp, aux);
 
-		//TODO : registrar las peticiones en el nttpd.log
+		time(&timevar);
+		strcpy(conexionRed, "");
+		strcpy(temporal,(char *)ctime(&timevar));
+		aux = strtok(temporal,caracteresRetorno);
+		sprintf(temporal, "%s - %s:%d - %s\n", aux, hostname, clientaddr_in.sin_port, mensajeOriginal);
+		strcat(conexionRed,temporal);
+		printf(conexionRed);
+		if (NULL == (p = (fopen(ficheroLog, "a"))))
+		{
+			fprintf(stderr, "No se ha podido abrir el fichero");
+		}
+		fputs(conexionRed, p);
+		fclose(p);
 
 		//COMPROBAR EL TIPO DE CONEXIÓN
 		if (strcmp(token[0], "LIST") == 0)
@@ -826,13 +839,16 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 	char grupoElegido[BUFFERSIZE] = "";
 	char mensajeOriginal[BUFFERSIZE * 5] = "";
 	char tokenTemp[BUFFERSIZE];
+	char temporal[BUFFERSIZE];
 
 	//VARIABLES FICHEROS
 	char pathGrupos[] = "nntp/noticias/grupos";				 //Nombre del archivo group, para LIST
 	char pathArticulos[] = "nntp/noticias/articulos/local/"; //Nombre del archivo group, para LIST
 	char ficheroLog[] = "nntpd.log";						 //Nombre del archivo de peticiones
 
-	char *aux;
+	time(&timevar);
+
+	char *aux, *horaPeticion = (char *)ctime(&timevar);
 	char token[4][BUFFERSIZE];
 	char envio[BUFFERSIZE]; //String para el envio al servidor
 	int q = 0, i = 0;
@@ -843,7 +859,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 	strcpy(mensaje, buffer);
 	strcpy(mensajeOriginal, mensaje);
 
-	printf("\e[35m%s\e[0m\n",mensaje);
+	printf("\e[35m%s\e[0m\n", mensaje);
 
 	addrlen = sizeof(struct sockaddr_in);
 
@@ -870,6 +886,20 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 		perror(" sigaction(SIGALRM)");
 		fprintf(stderr, "Unable to register the SIGALRM signal\n");
 		exit(1);
+	}
+
+	status = getnameinfo((struct sockaddr *)&clientaddr_in, sizeof(clientaddr_in), hostname, MAXHOST, NULL, 0, 0);
+
+	if (status)
+	{
+		/* The information is unavailable for the remote
+			 * host.  Just format its internet address to be
+			 * printed out in the logging information.  The
+			 * address will be shown in "internet dot format".
+			 */
+		/* inet_ntop para interoperatividad con IPv6 */
+		if (inet_ntop(AF_INET, &(clientaddr_in.sin_addr), hostname, MAXHOST) == NULL)
+			perror(" inet_ntop \n");
 	}
 
 	/*Registramos el establecimiento de conexion en el fichero nntp.log*/
@@ -909,7 +939,20 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 	{
 		socketON = 1;
 		reqcnt++;
-		//Vaciamos el vector que contendra cada argumento de la orden
+
+		time(&timevar);
+		strcpy(temp, "");
+		strcpy(temporal,(char *)ctime(&timevar));
+		aux = strtok(temporal,caracteresRetorno);
+		sprintf(temporal, "%s - %s:%d - %s\n", aux, hostname, clientaddr_in.sin_port, mensajeOriginal);
+		strcat(temp,temporal);
+		printf(temp);
+		if (NULL == (p = (fopen(ficheroLog, "a"))))
+		{
+			fprintf(stderr, "No se ha podido abrir el fichero");
+		}
+		fputs(temp, p);
+		fclose(p);
 
 		q = 0;
 		//Separamos la linea leida en tokens delimitados por espacios
@@ -950,8 +993,8 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 		aux = strtok(tokenTemp, caracteresRetorno);
 		if (aux != NULL)
 			strcpy(tokenTemp, aux);
-			
-		printf("\e[35m%s\e[0m\n",envio);
+
+		printf("\e[35m%s\e[0m\n", envio);
 		//COMPROBAR EL TIPO DE CONEXIÓN
 		if (strcmp(token[0], "LIST") == 0)
 		{
@@ -1196,7 +1239,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 		memset(envio, 0, sizeof envio);
 		memset(token[0], 0, sizeof token[0]);
 		memset(token[1], 0, sizeof token[1]);
-		
+
 		if (socketON)
 		{
 			/*Recibir y volver a enviar*/
@@ -1214,8 +1257,10 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 					exit(1);
 				}
 			}
+			time(&timevar);
+			horaPeticion = (char *)ctime(&timevar);
 			memset(mensaje, 0, sizeof(mensaje));
-			strcpy(mensaje,buffer);
+			strcpy(mensaje, buffer);
 			strcpy(mensajeOriginal, mensaje);
 		}
 		else

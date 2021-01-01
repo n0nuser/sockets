@@ -415,7 +415,7 @@ void UDP(FILE *f, int argc, char *argv[])
                 {
                     alarm(0); //Cancelamos la alarma
                     /*Sacamos la salida*/
-                    printf("\e[32m%s\e[0m");
+                    printf("\e[32m%s - %s\e[0m",argv[1],respuesta);
                     break; //Salimos del bucle de los intentos
                 }
             }
