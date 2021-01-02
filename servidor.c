@@ -33,8 +33,7 @@
 #define _GNU_SOURCE
 #define _XOPEN_SOURCE
 #define PUERTO 4492
-#define ADDRNOTFOUND 0xffffffff /* return address for unfound host */
-#define BUFFERSIZE 1024			/* maximum size of packets to be received */
+#define BUFFERSIZE 1024 /* maximum size of packets to be received */
 #define MAXHOST 128
 #define TIMEOUT 6 //Timeout para la señal de alarma
 
@@ -343,10 +342,10 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	char ficheroLog[] = "nntpd.log";						 //Nombre del archivo de peticiones
 
 	char *aux;
-	char token[3][100]; //NO TOCAR EL 100 O DA ERROR
+	char token[4][100]; //NO TOCAR EL 100 O DA ERROR
 	char tokenTemp[BUFFERSIZE];
 	char envio[BUFFERSIZE]; //String para el envio al servidor
-	char temporal[BUFFERSIZE]="";
+	char temporal[BUFFERSIZE] = "";
 	int q = 0, i = 0;
 	time_t fechaHora;
 
@@ -379,7 +378,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		 */
 	// Se ha iniciado el servidor
 	printf("[S] Startup from %s port %u at %s", hostname, ntohs(clientaddr_in.sin_port), (char *)ctime(&timevar));
-	sleep(1);
+	sleep(5);
 	/* Set the socket for a lingering, graceful close.
 		 * This will cause a final close of this socket to wait until all of the
 		 * data sent on it has been received by the remote host.
@@ -408,7 +407,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	strcat(temp, "TCP"); //Metemos protocolo de transporte
 
 	strcat(temp, " ");
-	snprintf(temp2, sizeof(temp2), "%d", clientaddr_in.sin_port); //Este es el puerto efímero
+	snprintf(temp2, sizeof(temp2), "%u", ntohs(clientaddr_in.sin_port)); //Este es el puerto efímero
 	strcat(temp, temp2);
 	strcat(temp, "\n"); //Metemos puerto efimero
 	//Se guarda la información en el fichero
@@ -443,9 +442,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 
 	// Enviamos que el servidor esta preparado con un 200
 	if (send(s, conexionRed, BUFFERSIZE, 0) != strlen(conexionRed))
-	{
 		fprintf(stderr, "Servidor: Send error ");
-	}
 
 	/* Go into a loop, receiving requests from the remote
 		 * client.  After the client has sent the last request,
@@ -457,10 +454,8 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		 * how the server will know that no more requests will
 		 * follow, and the loop will be exited.
 		 */
-	while (len = recv(s, mensaje, BUFFERSIZE * 5, 0))
+	while ((len = recv(s, mensaje, BUFFERSIZE * 5, 0)) != -1)
 	{
-		if (len == -1)
-			errout(hostname); /* error from recv */
 
 		strcpy(mensajeOriginal, mensaje);
 		reqcnt++;
@@ -514,11 +509,11 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 
 		time(&timevar);
 		strcpy(conexionRed, "");
-		strcpy(temporal,(char *)ctime(&timevar));
-		aux = strtok(temporal,caracteresRetorno);
-		sprintf(temporal, "%s - %s:%d - %s\n", aux, hostname, clientaddr_in.sin_port, mensajeOriginal);
-		strcat(conexionRed,temporal);
-		printf(conexionRed);
+		strcpy(temporal, (char *)ctime(&timevar));
+		aux = strtok(temporal, caracteresRetorno);
+		sprintf(temporal, "%s - %s:%u - %s\n", aux, hostname, ntohs(clientaddr_in.sin_port), mensajeOriginal);
+		strcat(conexionRed, temporal);
+		printf("%s", conexionRed);
 		if (NULL == (p = (fopen(ficheroLog, "a"))))
 		{
 			fprintf(stderr, "No se ha podido abrir el fichero");
@@ -529,37 +524,30 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		//COMPROBAR EL TIPO DE CONEXIÓN
 		if (strcmp(token[0], "LIST") == 0)
 		{
-			//
 			list(respuesta, pathGrupos, g);
-			//sleep(3);
+
+			sleep(5); //Tiempo de trabajo del servidor
+
 			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 				errout(hostname);
-
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(token[0], "NEWGROUPS") == 0)
 		{
+			newgroups(respuesta, pathGrupos, g, token[1], token[2]);
 
-			newsgroup(respuesta, pathGrupos, g, token[1], token[2]);
+			sleep(5); //Tiempo de trabajo del servidor
+
 			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 				errout(hostname);
-
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(token[0], "NEWNEWS") == 0)
 		{
-
 			newnews(respuesta, pathGrupos, pathArticulos, g, token[1], token[2], token[3]);
+
+			sleep(5); //Tiempo de trabajo del servidor
+
 			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 				errout(hostname);
-
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(token[0], "GROUP") == 0)
 		{
@@ -567,28 +555,26 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			//Ahora tratamos el segundo trozo que llega del group
 			if (group(respuesta, pathGrupos, g, token[1]))
 			{
-				//sleep(3);
+				sleep(5); //Tiempo de trabajo del servidor
+
 				strcpy(grupoElegido, token[1]);
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 					errout(hostname);
 			}
 			else
 			{
-				//Respuesta - 411 No such newsgroup
+				//Respuesta - 411 No such newgroups
 				strcpy(respuesta, "");
-				strcat(respuesta, "411 No such newsgroup");
+				strcat(respuesta, "411 No such newgroups");
 				strcat(respuesta, caracteresRetorno);
 				strcat(respuesta, "\0");
 
-				//sleep(3); //Tiempo de trabajo del servidor
+				sleep(5); //Tiempo de trabajo del servidor
 
 				//Enviamos la respuesta al cliente
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 					errout(hostname);
 			}
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(token[0], "ARTICLE") == 0)
 		{
@@ -596,6 +582,8 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			{
 				if (article(respuesta, pathArticulos, a, token[1], grupoElegido))
 				{
+					sleep(5); //Tiempo de trabajo del servidor
+
 					if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 						errout(hostname);
 				}
@@ -607,7 +595,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 					strcat(respuesta, caracteresRetorno);
 					strcat(respuesta, "\0");
 
-					//sleep(3); //Tiempo de trabajo del servidor
+					sleep(5); //Tiempo de trabajo del servidor
 
 					//Enviamos la respuesta al cliente
 					if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
@@ -616,21 +604,18 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			}
 			else
 			{
-				//Respuesta - 411 No such newsgroup
+				//Respuesta - 411 No such newgroups
 				strcpy(respuesta, "");
-				strcat(respuesta, "412 No newsgroup selected");
+				strcat(respuesta, "412 No newgroups selected");
 				strcat(respuesta, caracteresRetorno);
 				strcat(respuesta, "\0");
 
-				//sleep(3); //Tiempo de trabajo del servidor
+				sleep(5); //Tiempo de trabajo del servidor
 
 				//Enviamos la respuesta al cliente
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 					errout(hostname);
 			}
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(token[0], "HEAD") == 0)
 		{
@@ -649,7 +634,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 					strcat(respuesta, caracteresRetorno);
 					strcat(respuesta, "\0");
 
-					//sleep(3); //Tiempo de trabajo del servidor
+					sleep(5); //Tiempo de trabajo del servidor
 
 					//Enviamos la respuesta al cliente
 					if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
@@ -658,21 +643,18 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			}
 			else
 			{
-				//Respuesta - 411 No such newsgroup
+				//Respuesta - 411 No such newgroups
 				strcpy(respuesta, "");
-				strcat(respuesta, "412 No newsgroup selected");
+				strcat(respuesta, "412 No newgroups selected");
 				strcat(respuesta, caracteresRetorno);
 				strcat(respuesta, "\0");
 
-				//sleep(3); //Tiempo de trabajo del servidor
+				sleep(5); //Tiempo de trabajo del servidor
 
 				//Enviamos la respuesta al cliente
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 					errout(hostname);
 			}
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(token[0], "BODY") == 0)
 		{
@@ -680,6 +662,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			{
 				if (body(respuesta, pathArticulos, a, token[1], grupoElegido))
 				{
+					sleep(5); //Tiempo de trabajo del servidor
 					if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 						errout(hostname);
 				}
@@ -691,7 +674,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 					strcat(respuesta, caracteresRetorno);
 					strcat(respuesta, "\0");
 
-					//sleep(3); //Tiempo de trabajo del servidor
+					sleep(5); //Tiempo de trabajo del servidor
 
 					//Enviamos la respuesta al cliente
 					if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
@@ -700,45 +683,42 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			}
 			else
 			{
-				//Respuesta - 411 No such newsgroup
+				//Respuesta - 411 No such newgroups
 				strcpy(respuesta, "");
-				strcat(respuesta, "412 No newsgroup selected");
+				strcat(respuesta, "412 No newgroups selected");
 				strcat(respuesta, caracteresRetorno);
 				strcat(respuesta, "\0");
 
-				//sleep(3); //Tiempo de trabajo del servidor
+				sleep(5); //Tiempo de trabajo del servidor
 
 				//Enviamos la respuesta al cliente
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 					errout(hostname);
 			}
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(tokenTemp, "POST") == 0)
 		{
 			if (post(s, mensajeOriginal, pathGrupos, pathArticulos, g))
 			{
 				strcpy(respuesta, "240 Article received OK\n");
+				sleep(5); //Tiempo de trabajo del servidor
 				if (send(s, respuesta, strlen(respuesta), 0) != strlen(respuesta))
 					errout(hostname);
 			}
 			else
 			{
 				strcpy(respuesta, "441 Posting failed");
+				sleep(5); //Tiempo de trabajo del servidor
 				if (send(s, respuesta, strlen(respuesta), 0) != strlen(respuesta))
 					errout(hostname);
 			}
-			memset(mensaje, 0, sizeof mensaje);
 		}
 		else if (strcmp(token[0], "QUIT") == 0)
 		{
 			strcpy(respuesta, "\n205 Bye!\n");
+			sleep(5); //Tiempo de trabajo del servidor
 			if (send(s, respuesta, strlen(respuesta), 0) != strlen(respuesta))
 				errout(hostname);
-
-			memset(mensaje, 0, sizeof mensaje);
 			break;
 		}
 		else
@@ -749,7 +729,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			strcat(respuesta, caracteresRetorno);
 			strcat(respuesta, "\0");
 
-			sleep(1); //Tiempo de trabajo del servidor
+			sleep(5); //Tiempo de trabajo del servidor
 
 			//Enviamos la respuesta al cliente
 			if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
@@ -763,12 +743,10 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 			fputs("\n", p);
 			fputs(respuesta, p);
 			fclose(p);
-
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
-		//memset(respuesta, 0,sizeof respuesta);
+		memset(respuesta, 0, sizeof respuesta);
+		memset(mensaje, 0, sizeof mensaje);
+		memset(envio, 0, BUFFERSIZE);
 		memset(envio, 0, sizeof envio);
 		memset(token[0], 0, sizeof token[0]);
 		memset(token[1], 0, sizeof token[1]);
@@ -856,10 +834,10 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 	int addrlen;
 	int socketON = 1; //Flag que contola el estado del socket(abierto:true/cerrado:false)
 
+	strcpy(mensaje, "");
 	strcpy(mensaje, buffer);
-	strcpy(mensajeOriginal, mensaje);
-
-	printf("\e[35m%s\e[0m\n", mensaje);
+	strcpy(mensajeOriginal, "");
+	strcpy(mensajeOriginal, buffer);
 
 	addrlen = sizeof(struct sockaddr_in);
 
@@ -919,7 +897,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 	strcat(temp, "UDP"); //Metemos protocolo de transporte
 
 	strcat(temp, " ");
-	snprintf(temp2, sizeof(temp2), "%d", clientaddr_in.sin_port); //Este es el puerto efímero
+	snprintf(temp2, sizeof(temp2), "%u", ntohs(clientaddr_in.sin_port)); //Este es el puerto efímero
 	strcat(temp, temp2);
 	strcat(temp, "\n"); //Metemos puerto efimero
 	//Se guarda la información en el fichero
@@ -942,11 +920,11 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 
 		time(&timevar);
 		strcpy(temp, "");
-		strcpy(temporal,(char *)ctime(&timevar));
-		aux = strtok(temporal,caracteresRetorno);
-		sprintf(temporal, "%s - %s:%d - %s\n", aux, hostname, clientaddr_in.sin_port, mensajeOriginal);
-		strcat(temp,temporal);
-		printf(temp);
+		strcpy(temporal, (char *)ctime(&timevar));
+		aux = strtok(temporal, caracteresRetorno);
+		sprintf(temporal, "%s - %s:%u - %s\n", aux, hostname, ntohs(clientaddr_in.sin_port), mensajeOriginal);
+		strcat(temp, temporal);
+		printf("%s", temp);
 		if (NULL == (p = (fopen(ficheroLog, "a"))))
 		{
 			fprintf(stderr, "No se ha podido abrir el fichero");
@@ -994,39 +972,27 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 		if (aux != NULL)
 			strcpy(tokenTemp, aux);
 
-		printf("\e[35m%s\e[0m\n", envio);
 		//COMPROBAR EL TIPO DE CONEXIÓN
 		if (strcmp(token[0], "LIST") == 0)
 		{
-			//
 			list(respuesta, pathGrupos, g);
-			//sleep(3);
+
 			if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 				errout(hostname);
-
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(token[0], "NEWGROUPS") == 0)
 		{
-			newsgroup(respuesta, pathGrupos, g, token[1], token[2]);
+			newgroups(respuesta, pathGrupos, g, token[1], token[2]);
+
 			if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 				errout(hostname);
-
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(token[0], "NEWNEWS") == 0)
 		{
 			newnews(respuesta, pathGrupos, pathArticulos, g, token[1], token[2], token[3]);
+
 			if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 				errout(hostname);
-
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(token[0], "GROUP") == 0)
 		{
@@ -1040,21 +1006,16 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 			}
 			else
 			{
-				//Respuesta - 411 No such newsgroup
+				//Respuesta - 411 No such newgroups
 				strcpy(respuesta, "");
-				strcat(respuesta, "411 No such newsgroup");
+				strcat(respuesta, "411 No such newgroups");
 				strcat(respuesta, caracteresRetorno);
 				strcat(respuesta, "\0");
-
-				//sleep(3); //Tiempo de trabajo del servidor
 
 				//Enviamos la respuesta al cliente
 				if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 					errout(hostname);
 			}
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(token[0], "ARTICLE") == 0)
 		{
@@ -1073,8 +1034,6 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 					strcat(respuesta, caracteresRetorno);
 					strcat(respuesta, "\0");
 
-					//sleep(3); //Tiempo de trabajo del servidor
-
 					//Enviamos la respuesta al cliente
 					if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 						errout(hostname);
@@ -1082,21 +1041,16 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 			}
 			else
 			{
-				//Respuesta - 411 No such newsgroup
+				//Respuesta - 411 No such newgroups
 				strcpy(respuesta, "");
-				strcat(respuesta, "412 No newsgroup selected");
+				strcat(respuesta, "412 No newgroups selected");
 				strcat(respuesta, caracteresRetorno);
 				strcat(respuesta, "\0");
-
-				//sleep(3); //Tiempo de trabajo del servidor
 
 				//Enviamos la respuesta al cliente
 				if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 					errout(hostname);
 			}
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(token[0], "HEAD") == 0)
 		{
@@ -1115,8 +1069,6 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 					strcat(respuesta, caracteresRetorno);
 					strcat(respuesta, "\0");
 
-					//sleep(3); //Tiempo de trabajo del servidor
-
 					//Enviamos la respuesta al cliente
 					if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 						errout(hostname);
@@ -1124,21 +1076,16 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 			}
 			else
 			{
-				//Respuesta - 411 No such newsgroup
+				//Respuesta - 411 No such newgroups
 				strcpy(respuesta, "");
-				strcat(respuesta, "412 No newsgroup selected");
+				strcat(respuesta, "412 No newgroups selected");
 				strcat(respuesta, caracteresRetorno);
 				strcat(respuesta, "\0");
-
-				//sleep(3); //Tiempo de trabajo del servidor
 
 				//Enviamos la respuesta al cliente
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 					errout(hostname);
 			}
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(token[0], "BODY") == 0)
 		{
@@ -1157,8 +1104,6 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 					strcat(respuesta, caracteresRetorno);
 					strcat(respuesta, "\0");
 
-					//sleep(3); //Tiempo de trabajo del servidor
-
 					//Enviamos la respuesta al cliente
 					if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 						errout(hostname);
@@ -1166,33 +1111,30 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 			}
 			else
 			{
-				//Respuesta - 411 No such newsgroup
+				//Respuesta - 411 No such newgroups
 				strcpy(respuesta, "");
-				strcat(respuesta, "412 No newsgroup selected");
+				strcat(respuesta, "412 No newgroups selected");
 				strcat(respuesta, caracteresRetorno);
 				strcat(respuesta, "\0");
-
-				//sleep(3); //Tiempo de trabajo del servidor
 
 				//Enviamos la respuesta al cliente
 				if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 					errout(hostname);
 			}
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
 		else if (strcmp(tokenTemp, "POST") == 0)
 		{
 			if (post(s, mensajeOriginal, pathGrupos, pathArticulos, g))
 			{
 				strcpy(respuesta, "240 Article received OK\n");
+
 				if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 					errout(hostname);
 			}
 			else
 			{
 				strcpy(respuesta, "441 Posting failed");
+
 				if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 					errout(hostname);
 			}
@@ -1201,11 +1143,10 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 		else if (strcmp(token[0], "QUIT") == 0)
 		{
 			strcpy(respuesta, "\n205 Bye!\n");
+
 			if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 				errout(hostname);
 
-			memset(mensaje, 0, sizeof mensaje);
-			//break;
 			socketON = 0;
 		}
 		else
@@ -1216,37 +1157,30 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 			strcat(respuesta, caracteresRetorno);
 			strcat(respuesta, "\0");
 
-			sleep(1); //Tiempo de trabajo del servidor
-
 			//Enviamos la respuesta al cliente
 			if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 				errout(hostname);
 
 			//Introducimos la respuesta al fichero .log
 			if (NULL == (p = (fopen(ficheroLog, "a"))))
-			{
 				fprintf(stderr, "No se ha podido abrir el fichero");
-			}
 			fputs("\n", p);
 			fputs(respuesta, p);
 			fclose(p);
-
-			memset(mensaje, 0, sizeof mensaje);
-			memset(envio, 0, BUFFERSIZE);
-			memset(respuesta, 0, BUFFERSIZE);
 		}
-		//memset(respuesta, 0,sizeof respuesta);
+		memset(mensaje, 0, sizeof mensaje);
 		memset(envio, 0, sizeof envio);
 		memset(token[0], 0, sizeof token[0]);
 		memset(token[1], 0, sizeof token[1]);
+		memset(respuesta, 0, BUFFERSIZE);
+		memset(buffer, 0, sizeof(buffer));
+		memset(mensajeOriginal, 0, sizeof(mensajeOriginal));
+		memset(temporal, 0, sizeof temporal);
 
 		if (socketON)
 		{
 			/*Recibir y volver a enviar*/
 			alarm(TIMEOUT);
-			memset(buffer, 0, sizeof(buffer));
-			memset(mensaje, 0, sizeof(mensaje));
-			memset(mensajeOriginal, 0, sizeof(mensajeOriginal));
 			if (recvfrom(s, buffer, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, &addrlen) == -1)
 			{
 				if (errno == EINTR)
@@ -1257,11 +1191,11 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 					exit(1);
 				}
 			}
+
 			time(&timevar);
 			horaPeticion = (char *)ctime(&timevar);
-			memset(mensaje, 0, sizeof(mensaje));
 			strcpy(mensaje, buffer);
-			strcpy(mensajeOriginal, mensaje);
+			strcpy(mensajeOriginal, buffer);
 		}
 		else
 			break;
@@ -1271,11 +1205,10 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 	time(&timevar);
 	printf("Completed port %u, %d requests, at %s\n", ntohs(clientaddr_in.sin_port), reqcnt, (char *)ctime(&timevar));
 	close(s);
-	return;
 }
 
 /*Señal para la señal de alarma*/
 void handler()
 {
-	printf("No hay mas mensajes que recibir\n");
+	printf("No hay mas mensajes para recibir\n");
 }

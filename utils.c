@@ -114,7 +114,7 @@ int article(char *content, char *pathArticulos, FILE *a, char *articulo, char *g
 
     if (NULL == (a = (fopen(pathGrupo, "r"))))
     {
-        fprintf(stderr, "\e[94mError en la apertura del fichero %s\e[0m\n", pathGrupo);
+        fprintf(stderr, "Error en la apertura del fichero %s\n", pathGrupo);
         return 0;
     }
     while (fgets(buffer, BUFFERSIZE, a) != NULL)
@@ -142,7 +142,7 @@ int head(char *content, char *pathArticulos, FILE *a, char *articulo, char *grup
 
     if (NULL == (a = (fopen(pathGrupo, "r"))))
     {
-        fprintf(stderr, "\e[94mError en la apertura del fichero %s\e[0m\n", pathGrupo);
+        fprintf(stderr, "Error en la apertura del fichero %s\n", pathGrupo);
         return 0;
     }
     while (fgets(buffer, BUFFERSIZE, a) != NULL)
@@ -177,24 +177,23 @@ int body(char *content, char *pathArticulos, FILE *a, char *articulo, char *grup
 
     if (NULL == (a = (fopen(pathGrupo, "r"))))
     {
-        fprintf(stderr, "\e[94mError en la apertura del fichero %s\e[0m\n", pathGrupo);
+        fprintf(stderr, "Error en la apertura del fichero %s\n", pathGrupo);
         return 0;
     }
     while (fgets(buffer, BUFFERSIZE, a) != NULL)
     {
         strcpy(temp, buffer);
         aux = strtok(temp, " ");
-        if (strcmp(aux, "Message-ID:") == 0 || strcmp(aux, "Date:") == 0 || strcmp(aux, "Subject:") == 0)
-        {
+        if (strcmp(aux, "Message-ID:") == 0 || strcmp(aux, "Date:") == 0 || strcmp(aux, "Subject:") == 0 || strcmp(aux, "Newsgroups:") == 0)
             continue;
-        }
+
         strcat(content, buffer);
     }
     fclose(a);
     return 1;
 }
 
-void newsgroup(char *content, char *ficheroGroup, FILE *g, char *date, char *time)
+void newgroups(char *content, char *ficheroGroup, FILE *g, char *date, char *time)
 {
     char buffer[BUFFERSIZE], grupo[BUFFERSIZE] = "", fecha[BUFFERSIZE] = "", hora[BUFFERSIZE] = "";
     char *aux;
@@ -259,7 +258,7 @@ void newsgroup(char *content, char *ficheroGroup, FILE *g, char *date, char *tim
         }
     }
     fclose(g);
-    strcat(content, ".\n");
+    strcat(content, ".\n\n");
 }
 
 void newnews(char *content, char *ficheroGroup, char *pathArticulos, FILE *g, char *grupo, char *date, char *time)
@@ -274,38 +273,41 @@ void newnews(char *content, char *ficheroGroup, char *pathArticulos, FILE *g, ch
     int i = 0, j = 0, r = 0;
     int num_articulos_total = 0;
     char num_articulo[10];
-    char timeCommand[50]="";
-    char dateCommand[50]="";
+    char timeCommand[50] = "";
+    char dateCommand[50] = "";
     int recuento = 0; //Nº de artículos que coinciden con el criterio
 
     strtok(time, "\r\n");
     // Hora en formato 00:00:00
-    for(int t = 0; t < 6; t++) {
-        if (t%2 == 0) {
+    for (int t = 0; t < 6; t++)
+    {
+        if (t % 2 == 0)
+        {
             timeCommand[t] = ':';
             i++;
         }
-        timeCommand[t+i] = time[t];
+        timeCommand[t + i] = time[t];
     }
-    i=0;
+    i = 0;
     // Fecha en formato 00/00/00
-    for(int p = strlen(date); p <= 0; p--) {
-        if (p%2 == 0 && p != 6) {
+    for (int p = strlen(date); p <= 0; p--)
+    {
+        if (p % 2 == 0 && p != 6)
+        {
             dateCommand[p] = '/';
             r++;
             i++;
         }
-        dateCommand[r+i] = date[p];
+        dateCommand[r + i] = date[p];
         r++;
     }
 
-
     strcpy(content, "230 list follows since ");
-    strcat(content,timeCommand);
-    strcat(content," ");
-    strcat(content,dateCommand);
-    strcat(content,"\n");
-    
+    strcat(content, timeCommand);
+    strcat(content, " ");
+    strcat(content, dateCommand);
+    strcat(content, "\n");
+
     if (NULL == (g = (fopen(ficheroGroup, "r"))))
     {
         fprintf(stderr, "Error en la apertura del fichero %s\n", ficheroGroup);
@@ -465,8 +467,6 @@ int post(int socket, char *mensajeOriginal, char *ficheroGroup, char *pathArticu
     do
     {
         strcat(lineaActual, "\r\n");
-        printChars(lineaActual);
-        printf("\"\n");
         //strcat(mensajeTotal, lineaActual);
 
         if (strcmp(lineaActual, ".\r\n") == 0)

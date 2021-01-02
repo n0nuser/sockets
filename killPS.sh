@@ -1,3 +1,3 @@
 #!/bin/bash
-pkill --signal SIGKILL servidor
-pkill --signal SIGKILL cliente
+pkill --signal SIGTERM servidor
+pkill --signal SIGTERM cliente
