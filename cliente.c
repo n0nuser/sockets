@@ -24,13 +24,9 @@ extern int errno;
 #define PUERTO 4492     //Puerto
 #define BUFFERSIZE 1024 //Tamaño del buffer
 
-#define ADDRNOTFOUND 0xffffffff // value returned for unknown host
-#define RETRIES 5               //Intentos de recepcion de mensajes
-#define TIMEOUT 6               //Timeout de la señal
+#define RETRIES 5 //Intentos de recepcion de mensajes
+#define TIMEOUT 6 //Timeout de la señal
 #define MAXHOST 512
-
-char error[] = "\e[91m";
-char normal[] = "\e[0m";
 
 typedef struct
 {
@@ -88,10 +84,12 @@ void TCP(FILE *f, int argc, char *argv[])
     struct sockaddr_in myaddr_in;   /* for local socket address */
     struct sockaddr_in servaddr_in; /* for server socket address */
     int addrlen, len, i, j, errcode;
+    char puertoEfimero[100];
 
     char str[BUFFERSIZE];
     char respuesta[BUFFERSIZE]; //String para la respuesta del servidor
     FILE *c;
+    FILE *g;
 
     char buf[BUFFERSIZE * 5]; /*Contiene lo leido en el fichero linea a linea*/
     char tempBuf[BUFFERSIZE * 5];
@@ -170,13 +168,18 @@ void TCP(FILE *f, int argc, char *argv[])
          */
     printf("[C] Connected to %s on port %u at %s\n", argv[1], ntohs(myaddr_in.sin_port), (char *)ctime(&timevar));
 
+    //Puerto efimero path
+    strcpy(puertoEfimero, "");
+    sprintf(puertoEfimero, "%u", ntohs(myaddr_in.sin_port));
+    strcat(puertoEfimero, "_TCP.txt");
+
     //RECIBE EL ESTABLECIMIENTO DE CONEXIÓN DEL SERVIDOR (200 PREPARADO)
     if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
     {
         fprintf(stderr, "%s: error reading result\n", argv[0]);
         exit(1);
     }
-    printf("\e[32m%s\e[0m\n", respuesta);
+    printf("%s\n", respuesta);
     memset(respuesta, 0, BUFFERSIZE);
     // Limpiamos le buffer antes de que empieze a leer
     strcpy(buf, "");
@@ -187,7 +190,6 @@ void TCP(FILE *f, int argc, char *argv[])
         {
             continue;
         }
-
         if (strcmp(buf, "POST\r\n") == 0)
             flagPost = 1;
 
@@ -202,21 +204,23 @@ void TCP(FILE *f, int argc, char *argv[])
 
         if (flagPost == 0)
         {
+            //Mete mensaje progeso
+            if (NULL == (g = (fopen(puertoEfimero, "a"))))
+                fprintf(stderr, "No se ha podido abrir el fichero");
+            fputs(buf, g);
+            fclose(g);
+
+            sleep(1);
+
             /********************ENVIO**********************/
             /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/
             len = send(s, buf, strlen(buf), 0);
             if (len != strlen(buf))
             {
-                fprintf(stderr, "%s%s: Connection aborted on error\nMessage was: %s\nLength returned by send() was: %d%s\n", "\e[25;33m", argv[0], buf, len, normal);
+                fprintf(stderr, "%s: Connection aborted on error\nMessage was: %s\nLength returned by send() was: %d\n", argv[0], buf, len);
                 exit(1);
             }
             strcpy(tempBuf, ""); //Se resetea el buffer de lineas
-            /*
-            printf("\e[93mDEBUG [C]\e[0m He enviado: \"");
-            printChars(buf);
-            printf("\"\e[93mDEBUG [C]\e[0m Size of buffer: %ld\n", strlen(buf));
-            */
-            sleep(1);
 
             /********************RECEPCION DE RESPUESTA***********************/
             if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
@@ -224,7 +228,14 @@ void TCP(FILE *f, int argc, char *argv[])
                 fprintf(stderr, "%s: error reading result\n", argv[0]);
                 exit(1);
             }
-            printf("\e[32m%s\e[0m\n", respuesta);
+
+            //Mete mensaje progeso
+            if (NULL == (g = (fopen(puertoEfimero, "a"))))
+                fprintf(stderr, "No se ha podido abrir el fichero");
+            fputs(respuesta, g);
+            fputs("\n", g);
+            fclose(g);
+            printf("%s\n", respuesta);
             memset(respuesta, 0, BUFFERSIZE);
         }
     }
@@ -260,6 +271,7 @@ void UDP(FILE *f, int argc, char *argv[])
     struct sigaction vec;
     char hostname[MAXHOST];
     struct addrinfo hints, *res;
+    char puertoEfimero[100];
 
     char envio[BUFFERSIZE];     //String para el envio al servidor
     char respuesta[BUFFERSIZE]; //String para la respuesta del servidor
@@ -270,6 +282,7 @@ void UDP(FILE *f, int argc, char *argv[])
     char vect[3][100];
     int q = 0, p = 0;
     FILE *c;
+    FILE *g;
     char aux[7];
     char tempBuf[BUFFERSIZE * 5];
     int flagPost = 0;
@@ -320,6 +333,9 @@ void UDP(FILE *f, int argc, char *argv[])
      * that does require it.
      */
     printf("Connected to %s on port %u at %s", argv[1], ntohs(myaddr_in.sin_port), (char *)ctime(&timevar));
+    strcpy(puertoEfimero, "");
+    sprintf(puertoEfimero, "%u", ntohs(myaddr_in.sin_port));
+    strcat(puertoEfimero, "_UDP.txt");
 
     /* Set up the server address. */
     servaddr_in.sin_family = AF_INET;
@@ -386,6 +402,12 @@ void UDP(FILE *f, int argc, char *argv[])
             while (n_retry > 0)
             {
 
+                //Mete mensaje progeso
+                if (NULL == (g = (fopen(puertoEfimero, "a"))))
+                    fprintf(stderr, "No se ha podido abrir el fichero");
+                fputs(buf, g);
+                fclose(g);
+
                 /*Enviamos con el tamaño de la estructura enviada, si no devuelve el mismo tamaño da error*/
                 if (sendto(s, buf, strlen(buf), 0, (struct sockaddr *)&servaddr_in, sizeof(struct sockaddr_in)) != strlen(buf))
                 {
@@ -414,8 +436,16 @@ void UDP(FILE *f, int argc, char *argv[])
                 else
                 {
                     alarm(0); //Cancelamos la alarma
+
+                    //Mete mensaje progeso
+                    if (NULL == (g = (fopen(puertoEfimero, "a"))))
+                        fprintf(stderr, "No se ha podido abrir el fichero");
+                    fputs(respuesta, g);
+                    fputs("\n", g);
+                    fclose(g);
+
                     /*Sacamos la salida*/
-                    printf("\e[32m%s - %s\e[0m",argv[1],respuesta);
+                    printf("%s - %s", argv[1], respuesta);
                     break; //Salimos del bucle de los intentos
                 }
             }
@@ -427,7 +457,7 @@ void UDP(FILE *f, int argc, char *argv[])
             printf(" %s after %d attempts.\n", argv[1], RETRIES);
         }
     }
-    
+
     /* Print message indicating completion of task. */
     time(&timevar);
     printf("All done at %s", (char *)ctime(&timevar));
