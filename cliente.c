@@ -90,7 +90,7 @@ void TCP(FILE *f, int argc, char *argv[])
     if (s == -1)
     {
         perror(argv[0]);
-        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+        if (NULL == (g = (fopen("depuracion.txt", "a"))))
             fprintf(stderr, "No se ha podido abrir el fichero");
         fprintf(g, "%s: unable to create socket\n", argv[0]);
         fclose(g);
@@ -112,7 +112,7 @@ void TCP(FILE *f, int argc, char *argv[])
     errcode = getaddrinfo(argv[1], NULL, &hints, &res);
     if (errcode != 0)
     {
-        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+        if (NULL == (g = (fopen("depuracion.txt", "a"))))
             fprintf(stderr, "No se ha podido abrir el fichero");
         fprintf(g, "%s: Couldn't resolve IP for %s\n", argv[0], argv[1]);
         fclose(g);
@@ -132,7 +132,7 @@ void TCP(FILE *f, int argc, char *argv[])
     if (connect(s, (const struct sockaddr *)&servaddr_in, sizeof(struct sockaddr_in)) == -1)
     {
         perror(argv[0]);
-        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+        if (NULL == (g = (fopen("depuracion.txt", "a"))))
             fprintf(stderr, "No se ha podido abrir el fichero");
         fprintf(g, "%s: unable to connect to remote server.\n", argv[0]);
         fclose(g);
@@ -149,7 +149,7 @@ void TCP(FILE *f, int argc, char *argv[])
     if (getsockname(s, (struct sockaddr *)&myaddr_in, &addrlen) == -1)
     {
         perror(argv[0]);
-        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+        if (NULL == (g = (fopen("depuracion.txt", "a"))))
             fprintf(stderr, "No se ha podido abrir el fichero");
         fprintf(g, "%s: unable to read socket address.\n", argv[0]);
         fclose(g);
