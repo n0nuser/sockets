@@ -254,6 +254,7 @@ void TCP(FILE *f, int argc, char *argv[])
             fputs("\n", g);
             fclose(g);
 
+            memset(buf, 0, sizeof(buf));
             //Una vez operado ya todo lo necesario con respuesta
             //se reinicializa para no dar problemas con caracteres raros
         }
@@ -489,6 +490,7 @@ void UDP(FILE *f, int argc, char *argv[])
                 }
             }
         }
+        memset(buf, 0, sizeof(buf));
         // Mostramos por pantalla los distintos intentos de respuesta
         if (n_retry == 0)
         {
