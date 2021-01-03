@@ -1,3 +1,10 @@
+/*
+** Fichero: servidor.c
+** Autores:
+** Sergio García González
+** Pablo Jesús González Rubio
+*/
+
 #include <locale.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -108,7 +115,6 @@ int article(char *content, char *pathArticulos, FILE *a, char *articulo, char *g
     strcpy(pathGrupo, pathArticulos);
     strcat(pathGrupo, tempGrupo);
     strcat(pathGrupo, "/");
-    //RESULTADO PATH FICHERO
     strcat(pathGrupo, articulo);
     strtok(pathGrupo, "\r\n");
 
@@ -136,7 +142,6 @@ int head(char *content, char *pathArticulos, FILE *a, char *articulo, char *grup
     strcpy(pathGrupo, pathArticulos);
     strcat(pathGrupo, tempGrupo);
     strcat(pathGrupo, "/");
-    //RESULTADO PATH FICHERO
     strcat(pathGrupo, articulo);
     strtok(pathGrupo, "\r\n");
 
@@ -171,7 +176,6 @@ int body(char *content, char *pathArticulos, FILE *a, char *articulo, char *grup
     strcpy(pathGrupo, pathArticulos);
     strcat(pathGrupo, tempGrupo);
     strcat(pathGrupo, "/");
-    //RESULTADO PATH FICHERO
     strcat(pathGrupo, articulo);
     strtok(pathGrupo, "\r\n");
 
@@ -200,7 +204,6 @@ void newgroups(char *content, char *ficheroGroup, FILE *g, char *date, char *tim
     char trozos[3][BUFFERSIZE];
     int i = 0;
     strcpy(content, "231 List of new newsgroups follows (multi-line):\n");
-    //TODO: CAMBIAR FORMATO FECHA Y HORA
     if (NULL == (g = (fopen(ficheroGroup, "r"))))
     {
         fprintf(stderr, "Error en la apertura del fichero %s\n", ficheroGroup);
@@ -263,7 +266,6 @@ void newgroups(char *content, char *ficheroGroup, FILE *g, char *date, char *tim
 
 void newnews(char *content, char *ficheroGroup, char *pathArticulos, FILE *g, char *grupo, char *date, char *time)
 {
-    //TODO: Revisar formato fecha 20200718
     char buffer[BUFFERSIZE], tempBuffer[BUFFERSIZE], fecha[BUFFERSIZE] = "", hora[BUFFERSIZE] = "";
     char subject[BUFFERSIZE], messageId[BUFFERSIZE];
     char primero[10], ultimo[10];
@@ -273,39 +275,12 @@ void newnews(char *content, char *ficheroGroup, char *pathArticulos, FILE *g, ch
     int i = 0, j = 0, r = 0;
     int num_articulos_total = 0;
     char num_articulo[10];
-    char timeCommand[50] = "";
-    char dateCommand[50] = "";
     int recuento = 0; //Nº de artículos que coinciden con el criterio
 
-    strtok(time, "\r\n");
-    // Hora en formato 00:00:00
-    for (int t = 0; t < 6; t++)
-    {
-        if (t % 2 == 0)
-        {
-            timeCommand[t] = ':';
-            i++;
-        }
-        timeCommand[t + i] = time[t];
-    }
-    i = 0;
-    // Fecha en formato 00/00/00
-    for (int p = strlen(date); p <= 0; p--)
-    {
-        if (p % 2 == 0 && p != 6)
-        {
-            dateCommand[p] = '/';
-            r++;
-            i++;
-        }
-        dateCommand[r + i] = date[p];
-        r++;
-    }
-
     strcpy(content, "230 list follows since ");
-    strcat(content, timeCommand);
+    strcat(content, time);
     strcat(content, " ");
-    strcat(content, dateCommand);
+    strcat(content, date);
     strcat(content, "\n");
 
     if (NULL == (g = (fopen(ficheroGroup, "r"))))
@@ -337,11 +312,11 @@ void newnews(char *content, char *ficheroGroup, char *pathArticulos, FILE *g, ch
     }
     fclose(g);
 
-    strcpy(tempGrupo, grupo);         //Lo ponemos en uno temporal para que no modifique el original
-    aux = strtok(tempGrupo, ".");     //Aqui coge Local
+    strcpy(tempGrupo, grupo);         // Lo ponemos en uno temporal para que no modifique el original
+    aux = strtok(tempGrupo, ".");     // Aqui coge Local
     aux = strtok(NULL, " ");          // Aqui coge redes/deporte
-    strcpy(tempGrupo, aux);           //Guardamos redes/deporte
-    strcpy(pathGrupo, pathArticulos); //Le metemos a pathGrupo la dirección de los articulos
+    strcpy(tempGrupo, aux);           // Guardamos redes/deporte
+    strcpy(pathGrupo, pathArticulos); // Le metemos a pathGrupo la dirección de los articulos
     strcat(pathGrupo, tempGrupo);
     strcat(pathGrupo, "/");
 
@@ -467,7 +442,6 @@ int post(int socket, char *mensajeOriginal, char *ficheroGroup, char *pathArticu
     do
     {
         strcat(lineaActual, "\r\n");
-        //strcat(mensajeTotal, lineaActual);
 
         if (strcmp(lineaActual, ".\r\n") == 0)
             break;
