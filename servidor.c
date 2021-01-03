@@ -325,16 +325,16 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	char conexionRed[BUFFERSIZE] = "";	// Donde guardamos la información que va al log
 	char caracteresRetorno[] = "\r\n";	// Variables de control de línea
 	FILE *p, *g, *a;					// Punteros al diferentes archivos
-	char respuesta[BUFFERSIZE];			// Envio de respuesta al cliente
+	char respuesta[BUFFERSIZE * 6];		// Envio de respuesta al cliente
 	char temp[BUFFERSIZE];				// Cadena auxiliar
 	char temp2[50];						// Cadena auxiliar 2
 	char grupoElegido[BUFFERSIZE] = ""; // Se utiliza para mantener el control del grupo elegido al hacer GROUP, para luego ARTICLE y demas
 
-	char *aux;						// Puntero auxiliar para distintas operaciones
-	char token[4][100];				// Donde se trocea el mensaje recibido para las comprobaciones, NO TOCAR EL 100 O DA ERROR
-	char tokenTemp[BUFFERSIZE];		// Se utiliza para el POST, el anterior no sirve
-	char envio[BUFFERSIZE];			// Mensaje entero que recibe el servidor
-	char temporal[BUFFERSIZE*6] = ""; // Variable para indicar la fecha y hora de una peticion
+	char *aux;							// Puntero auxiliar para distintas operaciones
+	char token[4][100];					// Donde se trocea el mensaje recibido para las comprobaciones, NO TOCAR EL 100 O DA ERROR
+	char tokenTemp[BUFFERSIZE];			// Se utiliza para el POST, el anterior no sirve
+	char envio[BUFFERSIZE];				// Mensaje entero que recibe el servidor
+	char temporal[BUFFERSIZE * 6] = ""; // Variable para indicar la fecha y hora de una peticion
 	int q = 0, i = 0;
 
 	//PATH'S DE LOS FICHEROS
@@ -446,6 +446,20 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	{
 		strcpy(mensajeOriginal, mensaje); // Hacemos una copia de mensaje en mensajeOriginal
 		reqcnt++;						  //Se aumenta el numero de peticiones
+
+		// REGISTRO DE LA FECHA, HORA, HOST Y PUERTO DE LA PETICION RECIBIDA
+		time(&timevar);
+		strcpy(temporal, (char *)ctime(&timevar));
+		aux = strtok(temporal, caracteresRetorno);
+		strcpy(temp, aux);
+		strcpy(temporal, "");
+		sprintf(temporal, "[%s][%s:%u][TCP] - %s\n", temp, hostname, ntohs(clientaddr_in.sin_port), mensajeOriginal);
+		printf("%s", temporal);
+		if (NULL == (p = (fopen(ficheroLog, "a"))))
+			fprintf(stderr, "No se ha podido abrir el fichero");
+		fputs(temporal, p);
+		fclose(p);
+
 		//Inicializamos el vector token
 		for (i = 0; i < 3; i++)
 			strcpy(token[i], "");
@@ -491,18 +505,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		if (aux != NULL)
 			strcpy(tokenTemp, aux);
 
-		// REGISTRO DE LA FECHA, HORA, HOST Y PUERTO DE LA PETICION RECIBIDA
-		time(&timevar);
-		strcpy(conexionRed, "");
-		strcpy(temporal, (char *)ctime(&timevar));
-		aux = strtok(temporal, caracteresRetorno);
-		sprintf(temporal, "%s - %s:%u - %s\n", aux, hostname, ntohs(clientaddr_in.sin_port), mensajeOriginal);
-		strcat(conexionRed, temporal);
-		printf("%s", conexionRed);
-		if (NULL == (p = (fopen(ficheroLog, "a"))))
-			fprintf(stderr, "No se ha podido abrir el fichero");
-		fputs(conexionRed, p);
-		fclose(p);
+		memset(respuesta, 0, sizeof(respuesta));
 
 		//COMPROBAR LA PETICION
 		if (strcmp(token[0], "LIST") == 0)
@@ -549,7 +552,6 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 				strcpy(respuesta, "");
 				strcat(respuesta, "411 No such newgroups");
 				strcat(respuesta, caracteresRetorno);
-				strcat(respuesta, "\0");
 
 				sleep(5); //Tiempo de trabajo del servidor
 
@@ -573,7 +575,6 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 					strcpy(respuesta, "");
 					strcat(respuesta, "423  No article with that number");
 					strcat(respuesta, caracteresRetorno);
-					strcat(respuesta, "\0");
 
 					sleep(5); //Tiempo de trabajo del servidor
 
@@ -586,7 +587,6 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 				strcpy(respuesta, "");
 				strcat(respuesta, "412 No newgroups selected");
 				strcat(respuesta, caracteresRetorno);
-				strcat(respuesta, "\0");
 
 				sleep(5); //Tiempo de trabajo del servidor
 
@@ -608,7 +608,6 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 					strcpy(respuesta, "");
 					strcat(respuesta, "423  No article with that number");
 					strcat(respuesta, caracteresRetorno);
-					strcat(respuesta, "\0");
 
 					sleep(5); //Tiempo de trabajo del servidor
 
@@ -621,7 +620,6 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 				strcpy(respuesta, "");
 				strcat(respuesta, "412 No newgroups selected");
 				strcat(respuesta, caracteresRetorno);
-				strcat(respuesta, "\0");
 
 				sleep(5); //Tiempo de trabajo del servidor
 
@@ -645,7 +643,6 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 					strcpy(respuesta, "");
 					strcat(respuesta, "423  No article with that number");
 					strcat(respuesta, caracteresRetorno);
-					strcat(respuesta, "\0");
 
 					sleep(5); //Tiempo de trabajo del servidor
 
@@ -658,7 +655,6 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 				strcpy(respuesta, "");
 				strcat(respuesta, "412 No newgroups selected");
 				strcat(respuesta, caracteresRetorno);
-				strcat(respuesta, "\0");
 
 				sleep(5); //Tiempo de trabajo del servidor
 
@@ -700,10 +696,8 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		else
 		{
 			//Respuesta - 500 Command not recognized
-			strcpy(respuesta, "");
-			strcat(respuesta, "500 Command not recognized");
+			strcpy(respuesta, "500 Command not recognized");
 			strcat(respuesta, caracteresRetorno);
-			strcat(respuesta, "\0");
 
 			sleep(5); //Tiempo de trabajo del servidor
 
@@ -713,7 +707,6 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		memset(respuesta, 0, sizeof respuesta);
 		memset(mensaje, 0, sizeof mensaje);
 		memset(envio, 0, BUFFERSIZE);
-		memset(envio, 0, sizeof envio);
 		memset(token[0], 0, sizeof token[0]);
 		memset(token[1], 0, sizeof token[1]);
 	}
@@ -763,7 +756,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 	char mensajeOriginal[BUFFERSIZE * 5] = ""; // Donde se almacena el mensaje con el que NO se opera
 	char hostname[MAXHOST];					   // El nombre del host
 	int nc, errcode;
-	long timevar; // Contains time returned by time() 
+	long timevar; // Contains time returned by time()
 
 	int len, status;
 
@@ -774,14 +767,14 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 	//VARIABLES PARA NNTP
 	char caracteresRetorno[] = "\r\n";	// Variables de control de línea
 	FILE *p, *g, *a;					// Punteros al diferentes archivos
-	char respuesta[BUFFERSIZE];			// Envio de respuesta al cliente
+	char respuesta[BUFFERSIZE * 6];		// Envio de respuesta al cliente
 	char temp[BUFFERSIZE];				// Cadena auxiliar
 	char temp2[50];						// Cadena auxiliar 2
 	char grupoElegido[BUFFERSIZE] = ""; // Se utiliza para mantener el control del grupo elegido al hacer GROUP, para luego ARTICLE y demas
 	char *aux;							// Puntero auxiliar para distintas operaciones
 	char tokenTemp[BUFFERSIZE];			// Se utiliza para el POST, el anterior no sirve
 	char envio[BUFFERSIZE];				// Mensaje entero que recibe el servidor
-	char temporal[BUFFERSIZE * 6] = "";		// Variable para indicar la fecha y hora de una peticion
+	char temporal[BUFFERSIZE * 6] = ""; // Variable para indicar la fecha y hora de una peticion
 	char token[4][BUFFERSIZE];			// Donde se trocea el mensaje recibido para las comprobaciones, NO TOCAR EL 100 O DA ERROR
 	int q = 0, i = 0;
 
@@ -796,9 +789,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 	time(&timevar);
 
 	// Limpiamos las variables y las inicializamos
-	strcpy(mensaje, "");
 	strcpy(mensaje, buffer);
-	strcpy(mensajeOriginal, "");
 	strcpy(mensajeOriginal, buffer);
 
 	addrlen = sizeof(struct sockaddr_in);
@@ -878,15 +869,15 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 
 		// REGISTRO DE LA FECHA, HORA, HOST Y PUERTO DE LA PETICION RECIBIDA
 		time(&timevar);
-		strcpy(temp, "");
 		strcpy(temporal, (char *)ctime(&timevar));
 		aux = strtok(temporal, caracteresRetorno);
-		sprintf(temporal, "%s - %s:%u - %s\n", aux, hostname, ntohs(clientaddr_in.sin_port), mensajeOriginal);
-		strcat(temp, temporal);
-		printf("%s", temp);
+		strcpy(temp, aux);
+		strcpy(temporal, "");
+		sprintf(temporal, "[%s][%s:%u][TCP] - %s\n", temp, hostname, ntohs(clientaddr_in.sin_port), mensajeOriginal);
+		printf("%s", temporal);
 		if (NULL == (p = (fopen(ficheroLog, "a"))))
 			fprintf(stderr, "No se ha podido abrir el fichero");
-		fputs(temp, p);
+		fputs(temporal, p);
 		fclose(p);
 
 		q = 0;
@@ -929,6 +920,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 		if (aux != NULL)
 			strcpy(tokenTemp, aux);
 
+		strcpy(respuesta, "");
 		//COMPROBAR LA PETICION
 		if (strcmp(token[0], "LIST") == 0)
 		{
@@ -966,7 +958,6 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 				strcpy(respuesta, "");
 				strcat(respuesta, "411 No such newgroups");
 				strcat(respuesta, caracteresRetorno);
-				strcat(respuesta, "\0");
 
 				if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 					errout(hostname);
@@ -986,7 +977,6 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 					strcpy(respuesta, "");
 					strcat(respuesta, "423  No article with that number");
 					strcat(respuesta, caracteresRetorno);
-					strcat(respuesta, "\0");
 
 					if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 						errout(hostname);
@@ -997,7 +987,6 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 				strcpy(respuesta, "");
 				strcat(respuesta, "412 No newgroups selected");
 				strcat(respuesta, caracteresRetorno);
-				strcat(respuesta, "\0");
 
 				if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 					errout(hostname);
@@ -1017,7 +1006,6 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 					strcpy(respuesta, "");
 					strcat(respuesta, "423  No article with that number");
 					strcat(respuesta, caracteresRetorno);
-					strcat(respuesta, "\0");
 
 					if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 						errout(hostname);
@@ -1028,7 +1016,6 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 				strcpy(respuesta, "");
 				strcat(respuesta, "412 No newgroups selected");
 				strcat(respuesta, caracteresRetorno);
-				strcat(respuesta, "\0");
 
 				if (send(s, respuesta, BUFFERSIZE, 0) != BUFFERSIZE)
 					errout(hostname);
@@ -1048,7 +1035,6 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 					strcpy(respuesta, "");
 					strcat(respuesta, "423  No article with that number");
 					strcat(respuesta, caracteresRetorno);
-					strcat(respuesta, "\0");
 
 					if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 						errout(hostname);
@@ -1059,7 +1045,6 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 				strcpy(respuesta, "");
 				strcat(respuesta, "412 No newgroups selected");
 				strcat(respuesta, caracteresRetorno);
-				strcat(respuesta, "\0");
 
 				if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 					errout(hostname);
@@ -1097,7 +1082,6 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 			strcpy(respuesta, "");
 			strcat(respuesta, "500 Command not recognized");
 			strcat(respuesta, caracteresRetorno);
-			strcat(respuesta, "\0");
 
 			if (sendto(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&clientaddr_in, addrlen) != BUFFERSIZE)
 				errout(hostname);
@@ -1106,7 +1090,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 		memset(envio, 0, sizeof envio);
 		memset(token[0], 0, sizeof token[0]);
 		memset(token[1], 0, sizeof token[1]);
-		memset(respuesta, 0, BUFFERSIZE);
+		memset(respuesta, 0, sizeof respuesta);
 		memset(buffer, 0, sizeof(buffer));
 		memset(mensajeOriginal, 0, sizeof(mensajeOriginal));
 		memset(temporal, 0, sizeof temporal);

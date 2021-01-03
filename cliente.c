@@ -237,7 +237,7 @@ void TCP(FILE *f, int argc, char *argv[])
             /////////////////////////////////
             // RECEPCION DESDE EL SERVIDOR //
             /////////////////////////////////
-
+            memset(respuesta, 0, BUFFERSIZE);
             if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
             {
                 if (NULL == (g = (fopen(puertoEfimero, "a"))))
@@ -246,18 +246,16 @@ void TCP(FILE *f, int argc, char *argv[])
                 fclose(g);
                 exit(1);
             }
-
+            printf("%s\n", respuesta);
             // Guardamos el mensaje de progreso en el fichero de puerto efimero
             if (NULL == (g = (fopen(puertoEfimero, "a"))))
                 fprintf(stderr, "No se ha podido abrir el fichero");
             fputs(respuesta, g);
             fputs("\n", g);
             fclose(g);
-            printf("%s\n", respuesta);
 
             //Una vez operado ya todo lo necesario con respuesta
             //se reinicializa para no dar problemas con caracteres raros
-            memset(respuesta, 0, BUFFERSIZE);
         }
     }
     /* Now, shutdown the connection for further sends.
@@ -461,6 +459,7 @@ void UDP(FILE *f, int argc, char *argv[])
                 /////////////////////////////////
                 // RECEPCION DESDE EL SERVIDOR //
                 /////////////////////////////////
+                memset(respuesta, 0, BUFFERSIZE);
                 if ((len = recvfrom(s, respuesta, BUFFERSIZE, 0, (struct sockaddr *)&servaddr_in, &addrlen)) == -1)
                 {
                     if (errno == EINTR)
@@ -478,16 +477,14 @@ void UDP(FILE *f, int argc, char *argv[])
                 else
                 {
                     alarm(0); //Cancelamos la alarma
-
+                              // Mostramos la respuesta
+                    printf("%s - %s", argv[1], respuesta);
                     //Mete mensaje progeso
                     if (NULL == (g = (fopen(puertoEfimero, "a"))))
                         fprintf(stderr, "No se ha podido abrir el fichero");
                     fputs(respuesta, g);
                     fputs("\n", g);
                     fclose(g);
-
-                    // Mostramos la respuesta
-                    printf("%s - %s", argv[1], respuesta);
                     break;
                 }
             }

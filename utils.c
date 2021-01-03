@@ -123,6 +123,7 @@ int article(char *content, char *pathArticulos, FILE *a, char *articulo, char *g
         fprintf(stderr, "Error en la apertura del fichero %s\n", pathGrupo);
         return 0;
     }
+    strcpy(content, "");
     while (fgets(buffer, BUFFERSIZE, a) != NULL)
     {
         strcat(content, buffer);
@@ -150,6 +151,7 @@ int head(char *content, char *pathArticulos, FILE *a, char *articulo, char *grup
         fprintf(stderr, "Error en la apertura del fichero %s\n", pathGrupo);
         return 0;
     }
+    strcpy(content, "");
     while (fgets(buffer, BUFFERSIZE, a) != NULL)
     {
         strcpy(temp, buffer);
@@ -184,13 +186,13 @@ int body(char *content, char *pathArticulos, FILE *a, char *articulo, char *grup
         fprintf(stderr, "Error en la apertura del fichero %s\n", pathGrupo);
         return 0;
     }
+    strcpy(content, "");
     while (fgets(buffer, BUFFERSIZE, a) != NULL)
     {
         strcpy(temp, buffer);
         aux = strtok(temp, " ");
         if (strcmp(aux, "Message-ID:") == 0 || strcmp(aux, "Date:") == 0 || strcmp(aux, "Subject:") == 0 || strcmp(aux, "Newsgroups:") == 0)
             continue;
-
         strcat(content, buffer);
     }
     fclose(a);
