@@ -1,5 +1,0 @@
-Newsgroups: local.redes
-Subject: Sobre los sockets
-Los sockets son un API de programación en red.
-Permite utilizar los servicios de los protocolos de transporte TCP y UDP.
-.
