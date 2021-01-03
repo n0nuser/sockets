@@ -70,17 +70,17 @@ int main(int argc, char *argv[])
 void TCP(FILE *f, int argc, char *argv[])
 {
 
-    int s;                          // Socket
+    int s; // Socket
     struct addrinfo hints, *res;
     long timevar;                   // Tiene la fecha y la hora que devuelve time()
-    struct sockaddr_in myaddr_in;   // Guarda al direccion local 
+    struct sockaddr_in myaddr_in;   // Guarda al direccion local
     struct sockaddr_in servaddr_in; // Guarda la direccion del servidor
     int addrlen, len, i, j, errcode;
     int flagPost = 0;
 
-    char puertoEfimero[100]; // Nombre del fichero que guarda el progreso y la depuracion del cliente
+    char puertoEfimero[100];    // Nombre del fichero que guarda el progreso y la depuracion del cliente
     char respuesta[BUFFERSIZE]; //String para la respuesta del servidor
-    char buf[BUFFERSIZE * 5]; // Contiene lo leido en el fichero linea a linea
+    char buf[BUFFERSIZE * 5];   // Contiene lo leido en el fichero linea a linea
     char tempBuf[BUFFERSIZE * 5];
     char caracteresRetorno[] = "\r\n";
     FILE *c, *g;
@@ -90,7 +90,10 @@ void TCP(FILE *f, int argc, char *argv[])
     if (s == -1)
     {
         perror(argv[0]);
-        fprintf(stderr, "%s: unable to create socket\n", argv[0]);
+        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+            fprintf(stderr, "No se ha podido abrir el fichero");
+        fprintf(g, "%s: unable to create socket\n", argv[0]);
+        fclose(g);
         exit(1);
     }
 
@@ -104,12 +107,15 @@ void TCP(FILE *f, int argc, char *argv[])
     // Get the host information for the hostname that the user passed in.
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
-    
+
     // Esta función es la recomendada para la compatibilidad con IPv6 gethostbyname queda obsoleta
     errcode = getaddrinfo(argv[1], NULL, &hints, &res);
     if (errcode != 0)
     {
-        fprintf(stderr, "%s: Couldn't resolve IP for %s\n", argv[0], argv[1]);
+        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+            fprintf(stderr, "No se ha podido abrir el fichero");
+        fprintf(g, "%s: Couldn't resolve IP for %s\n", argv[0], argv[1]);
+        fclose(g);
         exit(1);
     }
     else
@@ -126,7 +132,10 @@ void TCP(FILE *f, int argc, char *argv[])
     if (connect(s, (const struct sockaddr *)&servaddr_in, sizeof(struct sockaddr_in)) == -1)
     {
         perror(argv[0]);
-        fprintf(stderr, "%s: unable to connect to remote server.\n", argv[0]);
+        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+            fprintf(stderr, "No se ha podido abrir el fichero");
+        fprintf(g, "%s: unable to connect to remote server.\n", argv[0]);
+        fclose(g);
         exit(1);
     }
     /* Since the connect call assigns a free address
@@ -140,7 +149,10 @@ void TCP(FILE *f, int argc, char *argv[])
     if (getsockname(s, (struct sockaddr *)&myaddr_in, &addrlen) == -1)
     {
         perror(argv[0]);
-        fprintf(stderr, "%s: unable to read socket address.\n", argv[0]);
+        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+            fprintf(stderr, "No se ha podido abrir el fichero");
+        fprintf(g, "%s: unable to read socket address.\n", argv[0]);
+        fclose(g);
         exit(1);
     }
 
@@ -163,7 +175,10 @@ void TCP(FILE *f, int argc, char *argv[])
     //RECIBE EL ESTABLECIMIENTO DE CONEXIÓN DEL SERVIDOR (200 PREPARADO)
     if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
     {
-        fprintf(stderr, "%s: error reading result\n", argv[0]);
+        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+            fprintf(stderr, "No se ha podido abrir el fichero");
+        fprintf(g, "%s: error reading result\n", argv[0]);
+        fclose(g);
         exit(1);
     }
     printf("%s\n", respuesta);
@@ -203,26 +218,32 @@ void TCP(FILE *f, int argc, char *argv[])
             fclose(g);
 
             sleep(1);
-            
+
             //////////////////////////
-	        // ENVIO DE LA PETICION //
-	        //////////////////////////
-            
+            // ENVIO DE LA PETICION //
+            //////////////////////////
+
             len = send(s, buf, strlen(buf), 0);
             if (len != strlen(buf))
             {
-                fprintf(stderr, "%s: Connection aborted on error\nMessage was: %s\nLength returned by send() was: %d\n", argv[0], buf, len);
+                if (NULL == (g = (fopen(puertoEfimero, "a"))))
+                    fprintf(stderr, "No se ha podido abrir el fichero");
+                fprintf(g, "%s: Connection aborted on error\nMessage was: %s\nLength returned by send() was: %d\n", argv[0], buf, len);
+                fclose(g);
                 exit(1);
             }
             strcpy(tempBuf, ""); //Se resetea el buffer de lineas
 
             /////////////////////////////////
-	        // RECEPCION DESDE EL SERVIDOR //
-	        /////////////////////////////////
-            
+            // RECEPCION DESDE EL SERVIDOR //
+            /////////////////////////////////
+
             if (-1 == (recv(s, respuesta, BUFFERSIZE, 0)))
             {
-                fprintf(stderr, "%s: error reading result\n", argv[0]);
+                if (NULL == (g = (fopen(puertoEfimero, "a"))))
+                    fprintf(stderr, "No se ha podido abrir el fichero");
+                fprintf(g, "%s: error reading result\n", argv[0]);
+                fclose(g);
                 exit(1);
             }
 
@@ -248,33 +269,36 @@ void TCP(FILE *f, int argc, char *argv[])
     if (shutdown(s, 1) == -1)
     {
         perror(argv[0]);
-        fprintf(stderr, "%s: unable to shutdown socket\n", argv[0]);
+        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+            fprintf(stderr, "No se ha podido abrir el fichero");
+        fprintf(g, "%s: unable to shutdown socket\n", argv[0]);
+        fclose(g);
         exit(1);
     }
 
-    // Print message indicating completion of task. 
+    // Print message indicating completion of task.
     time(&timevar);
     printf("All done at %s", (char *)ctime(&timevar));
 }
 
 void UDP(FILE *f, int argc, char *argv[])
 {
-    int s;                          // Socket
-    int i, errcode, addrlen, n_retry, len , flagPost = 0, q = 0, p = 0;
+    int s; // Socket
+    int i, errcode, addrlen, n_retry, len, flagPost = 0, q = 0, p = 0;
     int retry = RETRIES;            /* holds the retry count */
     long timevar;                   // Tiene la fecha y la hora que devuelve time()
-    struct sockaddr_in myaddr_in;   // Guarda al direccion local 
+    struct sockaddr_in myaddr_in;   // Guarda al direccion local
     struct sockaddr_in servaddr_in; // Guarda la direccion del servidor
     struct in_addr reqaddr;         /* for returned internet address */
     struct addrinfo hints, *res;
     struct sigaction vec;
     char hostname[MAXHOST];
-    char puertoEfimero[100]; // Nombre del fichero que guarda el progreso y la depuracion del cliente
+    char puertoEfimero[100];    // Nombre del fichero que guarda el progreso y la depuracion del cliente
     char respuesta[BUFFERSIZE]; //String para la respuesta del servidor
-    char buf[BUFFERSIZE * 5]; // Contiene lo leido en el fichero linea a linea
+    char buf[BUFFERSIZE * 5];   // Contiene lo leido en el fichero linea a linea
     char tempBuf[BUFFERSIZE * 5];
     char caracteresRetorno[] = "\r\n";
-    char envio[BUFFERSIZE];     //String para el envio al servidor
+    char envio[BUFFERSIZE]; //String para el envio al servidor
     char conexionRed[] = "NNTP";
     char *corta; //Puntero que apuntará a cada parte de la linea para separar
     char vect[3][100];
@@ -286,7 +310,10 @@ void UDP(FILE *f, int argc, char *argv[])
     if (s == -1)
     {
         perror(argv[0]);
-        fprintf(stderr, "%s: unable to create socket\n", argv[0]);
+        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+            fprintf(stderr, "No se ha podido abrir el fichero");
+        fprintf(g, "%s: unable to create socket\n", argv[0]);
+        fclose(g);
         exit(1);
     }
 
@@ -307,14 +334,20 @@ void UDP(FILE *f, int argc, char *argv[])
     if (bind(s, (const struct sockaddr *)&myaddr_in, sizeof(struct sockaddr_in)) == -1)
     {
         perror(argv[0]);
-        fprintf(stderr, "%s: unable to bind socket\n", argv[0]);
+        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+            fprintf(stderr, "No se ha podido abrir el fichero");
+        fprintf(g, "%s: unable to bind socket\n", argv[0]);
+        fclose(g);
         exit(1);
     }
     addrlen = sizeof(struct sockaddr_in);
     if (getsockname(s, (struct sockaddr *)&myaddr_in, &addrlen) == -1)
     {
         perror(argv[0]);
-        fprintf(stderr, "%s: unable to read socket address\n", argv[0]);
+        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+            fprintf(stderr, "No se ha podido abrir el fichero");
+        fprintf(g, "%s: unable to read socket address\n", argv[0]);
+        fclose(g);
         exit(1);
     }
 
@@ -343,7 +376,10 @@ void UDP(FILE *f, int argc, char *argv[])
     if (errcode != 0)
     {
         // Name was not found.  Return a special value signifying the error.
-        fprintf(stderr, "%s: Couldn't resolve IP for %s\n", argv[0], argv[1]);
+        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+            fprintf(stderr, "No se ha podido abrir el fichero");
+        fprintf(g, "%s: Couldn't resolve IP for %s\n", argv[0], argv[1]);
+        fclose(g);
         exit(1);
     }
     else
@@ -361,7 +397,10 @@ void UDP(FILE *f, int argc, char *argv[])
     if (sigaction(SIGALRM, &vec, (struct sigaction *)0) == -1)
     {
         perror("sigaction(SIGALRM)");
-        fprintf(stderr, "%s: unable to register the SIGALRM signal.\n", argv[0]);
+        if (NULL == (g = (fopen(puertoEfimero, "a"))))
+            fprintf(stderr, "No se ha podido abrir el fichero");
+        fprintf(g, "%s: unable to register the SIGALRM signal.\n", argv[0]);
+        fclose(g);
         exit(1);
     }
     // Limpiamos el buffer antes de que empieze a leer
@@ -383,7 +422,7 @@ void UDP(FILE *f, int argc, char *argv[])
         //Si lee POST entra en un estado condicional que mantiene leyendo el fichero
         if (strcmp(buf, "POST\r\n") == 0)
             flagPost = 1;
-        
+
         //Y guardandolo en tempbuf
         if (flagPost)
             strcat(tempBuf, buf);
@@ -410,7 +449,10 @@ void UDP(FILE *f, int argc, char *argv[])
                 if (sendto(s, buf, strlen(buf), 0, (struct sockaddr *)&servaddr_in, sizeof(struct sockaddr_in)) != strlen(buf))
                 {
                     perror(argv[0]);
-                    fprintf(stderr, "%s: unable to send request\n", argv[0]);
+                    if (NULL == (g = (fopen(puertoEfimero, "a"))))
+                        fprintf(stderr, "No se ha podido abrir el fichero");
+                    fprintf(g, "%s: unable to send request\n", argv[0]);
+                    fclose(g);
                 }
                 strcpy(tempBuf, "");
                 /*Establecemos una alarma para que el recvfrom no se quede en espera infinita por ser bloqueante*/
