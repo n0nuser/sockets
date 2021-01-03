@@ -706,6 +706,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 		}
 		memset(respuesta, 0, sizeof respuesta);
 		memset(mensaje, 0, sizeof mensaje);
+		strcpy(mensaje,"");
 		memset(envio, 0, BUFFERSIZE);
 		memset(token[0], 0, sizeof token[0]);
 		memset(token[1], 0, sizeof token[1]);
@@ -873,7 +874,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 		aux = strtok(temporal, caracteresRetorno);
 		strcpy(temp, aux);
 		strcpy(temporal, "");
-		sprintf(temporal, "[%s][%s:%u][TCP] - %s\n", temp, hostname, ntohs(clientaddr_in.sin_port), mensajeOriginal);
+		sprintf(temporal, "[%s][%s:%u][UDP] - %s\n", temp, hostname, ntohs(clientaddr_in.sin_port), mensajeOriginal);
 		printf("%s", temporal);
 		if (NULL == (p = (fopen(ficheroLog, "a"))))
 			fprintf(stderr, "No se ha podido abrir el fichero");
@@ -1091,9 +1092,10 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 		memset(token[0], 0, sizeof token[0]);
 		memset(token[1], 0, sizeof token[1]);
 		memset(respuesta, 0, sizeof respuesta);
-		memset(buffer, 0, sizeof(buffer));
 		memset(mensajeOriginal, 0, sizeof(mensajeOriginal));
 		memset(temporal, 0, sizeof temporal);
+		memset(buffer, 0, BUFFERSIZE);
+		strcpy(buffer,"");
 
 		if (flagSocket)
 		{
