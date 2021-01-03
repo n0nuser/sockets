@@ -1,5 +1,5 @@
 /*
-** Fichero: servidor.c
+** Fichero: utils.c
 ** Autores:
 ** Sergio García González
 ** Pablo Jesús González Rubio

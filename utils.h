@@ -1,3 +1,10 @@
+/*
+** Fichero: utils.h
+** Autores:
+** Sergio García González
+** Pablo Jesús González Rubio
+*/
+
 void printChars(char buf[]);
 void list(char *content,char *ficheroGroup, FILE *g);
 int group (char *content, char * ficheroGroup, FILE *g, char * grupo);
