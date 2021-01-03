@@ -535,7 +535,8 @@ int post(int socket, char *mensajeOriginal, char *ficheroGroup, char *pathArticu
 
         //QUITA TODAS LAS LINEAS HASTA QUE ENCUENTRA
         // LA N MAYUSCULA DE NEWSGROUP
-        m = mensajeOriginal;
+        strcpy(mensaje, mensajeOriginal);
+        m = mensaje;
         while (*m && *m != '\n')
             m++;
         m++;
