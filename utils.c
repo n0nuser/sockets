@@ -429,7 +429,7 @@ int post(int socket, char *mensajeOriginal, char *ficheroGroup, char *pathArticu
     char grupo[BUFFERSIZE], grupoConcreto[BUFFERSIZE];
     char aGuardarFGrupo[BUFFERSIZE * 5], aGuardarFGrupoLineaMod[BUFFERSIZE], aGuardarTemp[BUFFERSIZE];
     char pathArticulo[BUFFERSIZE];
-    char numUltimoArticuloStringCortado[5], numUltimoArticuloString[20];
+    char numUltimoArticuloStringCortado[5], numUltimoArticuloString[50];
     int numUltimoArticulo = 0;
     int len, lenArticuloCortado, lenArticulo, flagLeido = 1, grupoExiste = 0;
     char *aux, *lineaActual, *mensajeTemp, *s, *m;

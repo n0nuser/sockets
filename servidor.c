@@ -334,7 +334,7 @@ void serverTCP(int s, struct sockaddr_in clientaddr_in)
 	char token[4][100];				// Donde se trocea el mensaje recibido para las comprobaciones, NO TOCAR EL 100 O DA ERROR
 	char tokenTemp[BUFFERSIZE];		// Se utiliza para el POST, el anterior no sirve
 	char envio[BUFFERSIZE];			// Mensaje entero que recibe el servidor
-	char temporal[BUFFERSIZE] = ""; // Variable para indicar la fecha y hora de una peticion
+	char temporal[BUFFERSIZE*6] = ""; // Variable para indicar la fecha y hora de una peticion
 	int q = 0, i = 0;
 
 	//PATH'S DE LOS FICHEROS
@@ -781,7 +781,7 @@ void serverUDP(int s, char *buffer, struct sockaddr_in clientaddr_in)
 	char *aux;							// Puntero auxiliar para distintas operaciones
 	char tokenTemp[BUFFERSIZE];			// Se utiliza para el POST, el anterior no sirve
 	char envio[BUFFERSIZE];				// Mensaje entero que recibe el servidor
-	char temporal[BUFFERSIZE] = "";		// Variable para indicar la fecha y hora de una peticion
+	char temporal[BUFFERSIZE * 6] = "";		// Variable para indicar la fecha y hora de una peticion
 	char token[4][BUFFERSIZE];			// Donde se trocea el mensaje recibido para las comprobaciones, NO TOCAR EL 100 O DA ERROR
 	int q = 0, i = 0;
 
