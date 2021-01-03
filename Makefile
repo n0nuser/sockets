@@ -19,4 +19,4 @@ utils.o: utils.c utils.h
 	${CC} ${CFLAGS} -c -g utils.c ${LIBS}
 
 clean:
-	rm *.o ${PROGS} nntpd.log
+	rm *.o ${PROGS} nntpd.log depuracion.txt *_TCP.txt *_UDP.txt
