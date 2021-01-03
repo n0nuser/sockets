@@ -1,3 +1,10 @@
+#
+## Fichero: Makefile
+## Autores:
+## Sergio García González
+## Pablo Jesús González Rubio
+#
+
 CC = gcc
 CFLAGS = 
 #Descomentar la siguiente linea para olivo
